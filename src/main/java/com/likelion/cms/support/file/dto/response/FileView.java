@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+
 import java.time.OffsetDateTime;
 
 @Getter
@@ -15,8 +16,8 @@ public class FileView {
     private final String downloadUrl;
     private final OffsetDateTime expiresAt;
 
-    public static FileView of (FileAssetResponse file, String downloadUrl, OffsetDateTime expiresAt){
-        return new FileView(file,downloadUrl,expiresAt);
+    public static FileView of(FileAssetResponse file, String downloadUrl, OffsetDateTime expiresAt) {
+        return new FileView(file, downloadUrl, expiresAt);
     }
 
 }

@@ -9,13 +9,13 @@ import lombok.Getter;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 
-public class ProjectParticipantResponse{
+public class ProjectParticipantResponse {
     private final Long userId;
     private final String name;
     private final String role;
 
-    public static ProjectParticipantResponse of(Long userId, String name, String role){
-        return new ProjectParticipantResponse(userId,name,role);
+    public static ProjectParticipantResponse of(Long userId, String name, String role) {
+        return new ProjectParticipantResponse(userId, name, role);
     }
 
 }

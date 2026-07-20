@@ -14,7 +14,7 @@ public class CohortSummary {
     private final int number;
     private final String name;
 
-    public static CohortSummary of (Long cohortId,int number, String name){
-        return new CohortSummary(cohortId,number,name);
+    public static CohortSummary of(Long cohortId, int number, String name) {
+        return new CohortSummary(cohortId, number, name);
     }
 }

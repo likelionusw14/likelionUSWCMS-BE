@@ -1,10 +1,11 @@
 package com.likelion.cms.support.file.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.likelion.cms.common.type.FilePurpose;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import com.likelion.cms.common.type.FilePurpose;
+
 import java.time.OffsetDateTime;
 
 @Getter

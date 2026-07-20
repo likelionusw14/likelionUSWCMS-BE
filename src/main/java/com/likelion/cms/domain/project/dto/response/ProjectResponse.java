@@ -1,21 +1,22 @@
 package com.likelion.cms.domain.project.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.likelion.cms.common.type.ProjectType;
+import com.likelion.cms.domain.cohort.dto.response.CohortSummary;
+import com.likelion.cms.support.file.dto.response.FileView;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import com.likelion.cms.common.type.ProjectType;
-import com.likelion.cms.support.file.dto.response.FileView;
-import com.likelion.cms.domain.cohort.dto.response.CohortSummary;
-import java.util.List;
+
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
+import java.util.List;
 
 @Getter
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 
-public class ProjectResponse{
+public class ProjectResponse {
     private final Long projectId;
     private final String title;
     private final String description;
@@ -38,12 +39,12 @@ public class ProjectResponse{
     private final OffsetDateTime updatedAt;
 
 
-    public static ProjectResponse of (
+    public static ProjectResponse of(
             Long projectId, String title, String description, String deployUrl,
             String githubUrl, YearMonth startedMonth, YearMonth endedMonth, int version, FileView thumbnail,
             ProjectType projectType, CohortSummary cohort, List<ProjectParticipantResponse> participants,
-            OffsetDateTime createdAt, OffsetDateTime updatedAt){
-        return new ProjectResponse(projectId,title, description, deployUrl,githubUrl,startedMonth,endedMonth,
-                version, projectType, thumbnail, cohort,participants, createdAt, updatedAt);
+            OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+        return new ProjectResponse(projectId, title, description, deployUrl, githubUrl, startedMonth, endedMonth,
+                version, projectType, thumbnail, cohort, participants, createdAt, updatedAt);
     }
 }

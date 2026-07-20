@@ -1,11 +1,12 @@
 package com.likelion.cms.domain.resource.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.likelion.cms.common.type.PartType;
+import com.likelion.cms.support.file.dto.response.FileAssetResponse;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import com.likelion.cms.common.type.PartType;
-import com.likelion.cms.support.file.dto.response.FileAssetResponse;
+
 import java.time.OffsetDateTime;
 
 
@@ -29,10 +30,10 @@ public class LearningResourceResponse {
     private final int version;
     private final OffsetDateTime createdAt;
 
-    public static LearningResourceResponse of (Long resourceId, String title, int week,
-                                               PartType targetPart, Long createdBy, FileAssetResponse file,
-                                               int version, OffsetDateTime createdAt){
-        return new LearningResourceResponse(resourceId,title,week,targetPart,createdBy,file,version,createdAt);
+    public static LearningResourceResponse of(Long resourceId, String title, int week,
+                                              PartType targetPart, Long createdBy, FileAssetResponse file,
+                                              int version, OffsetDateTime createdAt) {
+        return new LearningResourceResponse(resourceId, title, week, targetPart, createdBy, file, version, createdAt);
     }
 
 
