@@ -23,6 +23,12 @@ public class ProjectResponse{
     private final String githubUrl;
     private final YearMonth startedMonth;
     private final YearMonth endedMonth;
+
+    /**
+     * verison : 낙관적 락(optimistic locking)을 위한 버전 값입니다.
+     * 수정 요청 시 클라이언트가 조회 시점의 이 값을 그대로 전달해야 하며,
+     * 서버에 저장된 현재 버전과 다르면 충돌로 간주해 요청이 거부됩니다.
+     */
     private final int version;
     private final ProjectType projectType;
     private final FileView thumbnail;
