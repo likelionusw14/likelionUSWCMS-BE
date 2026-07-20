@@ -1,10 +1,7 @@
 package com.likelion.cms.common.type;
 
-/*
-* 임시로 만들어 놓은 ProjectType입니다.
-*/
-
-public enum ProjectType{
+// TODO: 팀 컨벤션 확정 후 위치/필드 재검토 필요 (다른 도메인과 협의)
+public enum ProjectType {
     HACKATHON,
     IDEATHON
 }
