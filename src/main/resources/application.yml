@@ -10,7 +10,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     properties:
@@ -26,7 +26,8 @@ spring:
 
 server:
   port: 8080
-
+  servlet:
+    context-path: /api
 logging:
   level:
     org.hibernate.SQL: debug

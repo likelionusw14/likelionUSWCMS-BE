@@ -4,14 +4,9 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
+
 group = 'com.likelion'
 version = '0.0.1-SNAPSHOT'
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
 
 configurations {
     compileOnly {
@@ -52,4 +47,10 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// build.gradle 맨 아래에 추가
+tasks.withType(JavaCompile) {
+    options.fork = true
+    options.forkOptions.javaHome = System.getProperty("java.home") as File
 }
