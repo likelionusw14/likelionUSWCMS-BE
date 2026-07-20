@@ -9,6 +9,7 @@ import com.likelion.cms.support.file.dto.response.FileView;
 import com.likelion.cms.domain.cohort.dto.response.CohortSummary;
 import java.util.List;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 
 @Getter
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -20,8 +21,8 @@ public class ProjectResponse{
     private final String description;
     private final String deployUrl;
     private final String githubUrl;
-    private final String startedMonth;
-    private final String endedMonth;
+    private final YearMonth startedMonth;
+    private final YearMonth endedMonth;
     private final int version;
     private final ProjectType projectType;
     private final FileView thumbnail;
@@ -33,7 +34,7 @@ public class ProjectResponse{
 
     public static ProjectResponse of (
             Long projectId, String title, String description, String deployUrl,
-            String githubUrl, String startedMonth, String endedMonth, int version,FileView thumbnail,
+            String githubUrl, YearMonth startedMonth, YearMonth endedMonth, int version, FileView thumbnail,
             ProjectType projectType, CohortSummary cohort, List<ProjectParticipantResponse> participants,
             OffsetDateTime createdAt, OffsetDateTime updatedAt){
         return new ProjectResponse(projectId,title, description, deployUrl,githubUrl,startedMonth,endedMonth,
