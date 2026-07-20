@@ -8,6 +8,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProjectController {
     @GetMapping
     public String getProjects() {
-        return "SUCCESS";
+        return java.util.Collections.emptyList();
     }
 }
