@@ -92,4 +92,41 @@ public class AppUser extends BaseTimeEntity {
         this.systemRole = systemRole != null ? systemRole : SystemRole.MEMBER;
         this.accountStatus = accountStatus != null ? accountStatus : AccountStatus.PENDING;
     }
+
+    public void approve(AppUser approver) {
+        this.accountStatus = AccountStatus.ACTIVE;
+        this.approvedByUser = approver;
+        this.approvedAt = LocalDateTime.now();
+    }
+
+    public void reject(AppUser rejecter, String rejectionReason) {
+        this.accountStatus = AccountStatus.REJECTED;
+        this.rejectedByUser = rejecter;
+        this.rejectedAt = LocalDateTime.now();
+        this.rejectionReason = rejectionReason;
+    }
+
+    public void changeRole(SystemRole systemRole) {
+        this.systemRole = systemRole;
+    }
+
+    public void updateName(String name) {
+        this.name = name;
+    }
+
+    public void updateDepartment(String department) {
+        this.department = department;
+    }
+
+    public void updatePart(PartType part) {
+        this.part = part;
+    }
+
+    public void updateCohort(Cohort cohort) {
+        this.cohort = cohort;
+    }
+
+    public void delete() {
+        this.deletedAt = LocalDateTime.now();
+    }
 }
