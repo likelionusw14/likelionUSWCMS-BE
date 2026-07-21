@@ -19,6 +19,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+// 클래스 레벨은 기본 readOnly 트랜잭션이고, 실제로 상태를 바꾸는 메서드에만
+// @Transactional을 따로 붙여서 쓰기 트랜잭션으로 승격시킴 (조회 성능 최적화 목적).
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -27,6 +29,7 @@ public class UserService {
     private final AppUserRepository appUserRepository;
     private final CohortRepository cohortRepository;
 
+    // status가 없으면 전체 조회, 있으면 상태로 필터링 (관리자가 "가입 대기 목록만 보기" 같은 용도로 씀).
     public PageResponse<AccountResponse> list(AccountStatus accountStatus, Pageable pageable) {
         Page<AppUser> accounts = accountStatus == null
                 ? appUserRepository.findAll(pageable)
@@ -38,6 +41,7 @@ public class UserService {
     public AccountResponse approve(Long userId, Long actorUserId) {
         AppUser actor = findActor(actorUserId);
         AppUser target = findAccount(userId);
+        // 이미 승인/거절 처리된 계정을 중복으로 승인 못 하게 막음.
         validatePendingStatus(target);
         target.approve(actor);
         return AccountResponse.from(target);
@@ -57,6 +61,8 @@ public class UserService {
         findActor(actorUserId);
         AppUser target = findAccount(userId);
         validateVersion(target.getVersion(), request.version());
+        // 관리자가 실수로 "자기 자신"을 MEMBER로 강등하면 관리 기능 자체에
+        // 아무도 접근 못 하게 잠길 수 있어서, 본인 강등만 예외적으로 막음.
         if (target.getUserId().equals(actorUserId) && request.systemRole() != SystemRole.ADMIN) {
             throw new BusinessException(ErrorCode.CONFLICT, "자기 자신의 관리자 권한은 해제할 수 없습니다.");
         }
@@ -70,6 +76,8 @@ public class UserService {
         AppUser target = findAccount(userId);
         validateVersion(target.getVersion(), request.getVersion());
 
+        // 부분 수정: 요청에 "포함된" 필드만 반영. 클라이언트가 값을 안 보낸 필드는
+        // 기존 값을 그대로 유지해야 하므로, request의 xxxProvided() 플래그로 판단.
         if (request.isNameProvided()) {
             target.updateName(request.getName().trim());
         }
@@ -90,17 +98,23 @@ public class UserService {
     public void delete(Long userId, Long actorUserId) {
         findActor(actorUserId);
         AppUser target = findAccount(userId);
+        // changeRole과 같은 이유 - 관리자가 자기 자신을 지워서 스스로 접근 권한을
+        // 잃는 상황을 막음.
         if (target.getUserId().equals(actorUserId)) {
             throw new BusinessException(ErrorCode.CONFLICT, "자기 자신은 삭제할 수 없습니다.");
         }
         target.delete();
     }
 
+    // 요청을 보낸 사람(관리자) 자신이 실제 DB에 존재하는 유효한 계정인지 확인.
+    // 지금은 인증 인프라가 없어서 항상 정상 케이스만 타지만, 나중에 인증이 붙으면
+    // 위조/탈퇴된 계정의 토큰으로 요청이 와도 여기서 걸러짐.
     private AppUser findActor(Long actorUserId) {
         return appUserRepository.findById(actorUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
     }
 
+    // 처리 대상 회원 조회. @SQLRestriction 덕분에 소프트 삭제된 회원은 자동으로 빠짐.
     private AppUser findAccount(Long userId) {
         return appUserRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
@@ -117,6 +131,8 @@ public class UserService {
         }
     }
 
+    // 낙관적 락: 클라이언트가 "내가 마지막으로 조회했을 때의 버전"을 같이 보내고,
+    // 그 사이 누가 먼저 수정해서 버전이 바뀌었으면 충돌로 처리 (덮어쓰기 방지).
     private void validateVersion(Integer actualVersion, Integer requestedVersion) {
         if (!requestedVersion.equals(actualVersion)) {
             throw new BusinessException(ErrorCode.OPTIMISTIC_LOCK_CONFLICT);

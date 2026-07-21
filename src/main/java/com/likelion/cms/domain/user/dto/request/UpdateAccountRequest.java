@@ -9,6 +9,10 @@ import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+// PATCH 부분 수정 요청. record가 아니라 일반 클래스인 이유:
+// "필드를 아예 안 보냄"과 "필드를 null로 보냄"을 구분해야 하는데,
+// record/일반 setter로는 이 구분이 안 돼서 @JsonSetter를 직접 오버라이드함.
+// 필드마다 붙어있는 xxxProvided 플래그가 "요청 JSON에 이 키가 실제로 있었는지"를 나타냄.
 @Getter
 @NoArgsConstructor
 public class UpdateAccountRequest {
@@ -36,6 +40,8 @@ public class UpdateAccountRequest {
         this.version = version;
     }
 
+    // Jackson이 JSON을 파싱하면서 "name" 키를 실제로 만났을 때만 이 setter가 불림.
+    // 그래서 provided 플래그를 여기서 true로 세팅하면 "값이 왔었다"는 뜻이 됨.
     @JsonSetter
     public void setName(String name) {
         this.nameProvided = true;
@@ -60,11 +66,13 @@ public class UpdateAccountRequest {
         this.cohortId = cohortId;
     }
 
+    // version 말고 최소 하나의 실제 수정 필드는 있어야 함 (빈 PATCH 요청 방지).
     @AssertTrue(message = "version 외에 하나 이상의 수정 필드가 필요합니다.")
     public boolean isAnyChangeProvided() {
         return nameProvided || departmentProvided || partProvided || cohortIdProvided;
     }
 
+    // "필드가 왔으면" 그 값 자체는 유효해야 함 (안 왔으면 검증 스킵 - !xxxProvided).
     @AssertTrue(message = "수정 필드의 값이 올바르지 않습니다.")
     public boolean isProvidedValueValid() {
         boolean validName = !nameProvided

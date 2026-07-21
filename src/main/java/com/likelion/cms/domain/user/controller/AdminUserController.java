@@ -28,17 +28,21 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+// 관리자 전용 회원 관리 API. /api/users(일반 사용자용, 아직 미구현)와는
+// 별도 컨트롤러로 분리 - 관리자 액션은 항상 AdminAccessGuard를 거치게 강제하기 위함.
 @Validated
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admin/users")
 public class AdminUserController {
 
+    // 스펙 상 페이지 size는 최대 100까지만 허용 (한 번에 너무 많은 데이터 조회 방지).
     private static final int MAX_PAGE_SIZE = 100;
 
     private final UserService userService;
     private final AdminAccessGuard adminAccessGuard;
 
+    // GET /api/admin/users?status=PENDING&page=0&size=20
     @GetMapping
     public PageResponse<AccountResponse> list(
             @AuthenticationPrincipal CurrentUserPrincipal principal,
@@ -46,11 +50,13 @@ public class AdminUserController {
             @PageableDefault(size = 20) Pageable pageable
     ) {
         adminAccessGuard.requireAdmin(principal);
+        // 클라이언트가 size=1000 같은 값을 보내도 서버가 강제로 100까지만 잘라줌.
         Pageable boundedPageable = PageRequest.of(
                 pageable.getPageNumber(), Math.min(pageable.getPageSize(), MAX_PAGE_SIZE), pageable.getSort());
         return userService.list(status, boundedPageable);
     }
 
+    // PATCH /api/admin/users/{userId}/approve - 가입 승인 (바디 없음)
     @PatchMapping("/{userId}/approve")
     public AccountResponse approve(
             @AuthenticationPrincipal CurrentUserPrincipal principal,
@@ -60,6 +66,7 @@ public class AdminUserController {
         return userService.approve(userId, actorUserId);
     }
 
+    // PATCH /api/admin/users/{userId}/reject - 가입 거절 (사유 필수)
     @PatchMapping("/{userId}/reject")
     public AccountResponse reject(
             @AuthenticationPrincipal CurrentUserPrincipal principal,
@@ -70,6 +77,7 @@ public class AdminUserController {
         return userService.reject(userId, request, actorUserId);
     }
 
+    // PATCH /api/admin/users/{userId}/role - 권한 변경 (낙관적 락 버전 필요)
     @PatchMapping("/{userId}/role")
     public AccountResponse changeRole(
             @AuthenticationPrincipal CurrentUserPrincipal principal,
@@ -80,6 +88,7 @@ public class AdminUserController {
         return userService.changeRole(userId, request, actorUserId);
     }
 
+    // PATCH /api/admin/users/{userId} - 회원 정보 부분 수정
     @PatchMapping("/{userId}")
     public AccountResponse update(
             @AuthenticationPrincipal CurrentUserPrincipal principal,
@@ -90,6 +99,7 @@ public class AdminUserController {
         return userService.update(userId, request, actorUserId);
     }
 
+    // DELETE /api/admin/users/{userId} - 소프트 삭제, 성공 시 204 No Content
     @DeleteMapping("/{userId}")
     public ResponseEntity<Void> delete(
             @AuthenticationPrincipal CurrentUserPrincipal principal,
