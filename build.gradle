@@ -8,6 +8,12 @@ plugins {
 group = 'com.likelion'
 version = '0.0.1-SNAPSHOT'
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
 configurations {
     compileOnly {
         extendsFrom annotationProcessor
@@ -36,8 +42,8 @@ dependencies {
     runtimeOnly 'com.mysql:mysql-connector-j'
 
     // Lombok
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
+    compileOnly 'org.projectlombok:lombok:1.18.32'
+    annotationProcessor 'org.projectlombok:lombok:1.18.32'
 
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -49,8 +55,3 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-// build.gradle 맨 아래에 추가
-tasks.withType(JavaCompile) {
-    options.fork = true
-    options.forkOptions.javaHome = System.getProperty("java.home") as File
-}
