@@ -65,6 +65,15 @@ class AdminUserControllerTest {
     }
 
     @Test
+    void approveRejectsMalformedUserId() throws Exception {
+        mockMvc.perform(patch("/api/admin/users/not-a-number/approve")
+                        .with(authentication(adminAuthentication())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("C001"));
+        verify(userService, never()).approve(any(), any());
+    }
+
+    @Test
     void rejectRejectsUnauthenticatedRequest() throws Exception {
         mockMvc.perform(patch("/api/admin/users/2/reject")
                         .contentType(MediaType.APPLICATION_JSON)
