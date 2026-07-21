@@ -7,6 +7,8 @@ import com.likelion.cms.domain.project.entity.Project;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+// FileAsset 전체가 아니라 thumbnailAssetId만 노출 - 파일 상세 조회는
+// 별도 API(support/file) 몫이라 여기선 참조 ID만 필요.
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ProjectResponse(
         Long projectId,

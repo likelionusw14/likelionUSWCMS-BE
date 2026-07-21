@@ -88,6 +88,8 @@ public class Project extends BaseTimeEntity {
         this.createdByUser = createdByUser;
     }
 
+    // ===== 여기부터 이번 이슈(관리자 프로젝트 관리)에서 추가한 도메인 메서드 =====
+
     public void updateTitle(String title) {
         this.title = title;
     }
@@ -100,6 +102,8 @@ public class Project extends BaseTimeEntity {
         this.projectType = projectType;
     }
 
+    // null을 넘기면 썸네일 제거, 새 FileAsset을 넘기면 교체.
+    // "언제 null을 넘길지"는 서비스 레이어(ProjectService.update)에서 판단.
     public void updateThumbnailAsset(FileAsset thumbnailAsset) {
         this.thumbnailAsset = thumbnailAsset;
     }
@@ -124,6 +128,7 @@ public class Project extends BaseTimeEntity {
         this.endedMonth = endedMonth;
     }
 
+    // 소프트 삭제 - AppUser.delete()와 동일한 패턴.
     public void delete() {
         this.deletedAt = LocalDateTime.now();
     }

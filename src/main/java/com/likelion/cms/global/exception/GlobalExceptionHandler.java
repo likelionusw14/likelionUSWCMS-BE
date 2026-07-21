@@ -45,6 +45,9 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(ErrorCode.INVALID_INPUT, errorDetails));
     }
 
+    // 아래 4개는 원래 이 파일에 없어서 전부 500(INTERNAL_ERROR)으로 나가던 것을
+    // 추가한 부분. 예: Idempotency-Key 헤더 누락, @PathVariable Long에 문자열이
+    // 오는 경우 등 - 전부 "서버 잘못"이 아니라 "요청이 잘못된 것"이므로 400이 맞음.
     @ExceptionHandler({
             ConstraintViolationException.class,
             HttpMessageNotReadableException.class,
@@ -58,6 +61,9 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(ErrorCode.INVALID_INPUT));
     }
 
+    // 서비스에서 미리 버전을 비교해서 막지만, 두 요청이 동시에 들어오는 진짜 경합
+    // 상황에서는 Hibernate가 flush 시점에 이 예외를 직접 던질 수 있음 - 그 경우도
+    // 놓치지 않고 409로 응답하도록 별도 처리.
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
     protected ResponseEntity<ErrorResponse> handleOptimisticLockingFailure(
             ObjectOptimisticLockingFailureException e) {

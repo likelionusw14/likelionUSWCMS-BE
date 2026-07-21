@@ -10,6 +10,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
+// PATCH 부분 수정 요청. UpdateAccountRequest와 동일한 xxxProvided 패턴 -
+// "필드를 안 보냄(유지)"과 "null로 보냄(제거)"을 구분하기 위해 @JsonSetter를 직접 씀.
 @Getter
 @NoArgsConstructor
 public class UpdateProjectRequest {
@@ -70,6 +72,9 @@ public class UpdateProjectRequest {
         this.projectType = projectType;
     }
 
+    // 핵심 포인트: null도 "유효한 값"(썸네일 제거)이라, null이 와도 이 setter는
+    // 호출되고 thumbnailAssetIdProvided는 true가 됨. "제공 여부"는 이 플래그로,
+    // "제거인지 교체인지"는 null 여부로 서비스 레이어에서 나눠서 판단.
     @JsonSetter
     public void setThumbnailAssetId(Long thumbnailAssetId) {
         this.thumbnailAssetIdProvided = true;

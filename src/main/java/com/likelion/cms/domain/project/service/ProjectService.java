@@ -33,6 +33,7 @@ public class ProjectService {
     @Transactional
     public ProjectResponse create(CreateProjectRequest request, Long actorUserId) {
         AppUser actor = findActor(actorUserId);
+        // cohortId는 필수 - 프로젝트는 반드시 특정 기수에 속해야 함 (엔티티에도 not-null).
         Cohort cohort = findCohort(request.cohortId());
         FileAsset thumbnailAsset = request.thumbnailAssetId() == null
                 ? null
@@ -60,6 +61,7 @@ public class ProjectService {
         Project project = findProject(projectId);
         validateVersion(project.getVersion(), request.getVersion());
 
+        // 부분 수정 패턴 (UserService.update와 동일한 방식)
         if (request.isTitleProvided()) {
             project.updateTitle(request.getTitle().trim());
         }
@@ -69,6 +71,9 @@ public class ProjectService {
         if (request.isProjectTypeProvided()) {
             project.updateProjectType(request.getProjectType().trim());
         }
+        // thumbnailAssetId: 키 자체를 안 보내면(false) 기존 값 유지,
+        // "thumbnailAssetId": null 로 명시적으로 보내면 썸네일 제거,
+        // 실제 ID를 보내면 그 파일로 교체.
         if (request.isThumbnailAssetIdProvided()) {
             FileAsset thumbnailAsset = request.getThumbnailAssetId() == null
                     ? null
@@ -90,6 +95,8 @@ public class ProjectService {
         if (request.isEndedMonthProvided()) {
             project.updateEndedMonth(request.getEndedMonth());
         }
+        // 두 날짜 중 하나만 바뀌어도 "종료일 < 시작일"이 될 수 있어서,
+        // 모든 필드 반영이 끝난 "최종 상태" 기준으로 마지막에 한 번 더 검증.
         validateDateRange(project.getStartedMonth(), project.getEndedMonth());
 
         return ProjectResponse.from(project);
@@ -117,6 +124,8 @@ public class ProjectService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
     }
 
+    // 파일이 존재하는지뿐 아니라 "프로젝트 썸네일 용도로 업로드된 파일인지"까지 검증.
+    // 공지 이미지용으로 올린 파일을 프로젝트 썸네일에 잘못 끼워 넣는 걸 막기 위함.
     private FileAsset findThumbnailAsset(Long fileAssetId) {
         FileAsset fileAsset = fileAssetRepository.findById(fileAssetId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));

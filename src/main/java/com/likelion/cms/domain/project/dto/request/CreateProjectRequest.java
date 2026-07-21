@@ -9,6 +9,8 @@ import jakarta.validation.constraints.Size;
 import java.net.URI;
 import java.time.LocalDate;
 
+// 프로젝트 등록 요청. 두 날짜가 항상 같이 오니까 여기서 바로 순서 검증 가능
+// (부분 수정인 UpdateProjectRequest는 그럴 수 없어서 서비스 레이어에서 따로 검증).
 public record CreateProjectRequest(
         @NotBlank @Size(max = 150) String title,
         @NotBlank @Size(max = 20000) String description,
@@ -35,6 +37,7 @@ public record CreateProjectRequest(
         return startedMonth == null || endedMonth == null || !endedMonth.isBefore(startedMonth);
     }
 
+    // UpdateProjectRequest에서도 재사용하려고 package-private static으로 뺌.
     static boolean isHttpUrl(String value) {
         if (value == null) {
             return true;
