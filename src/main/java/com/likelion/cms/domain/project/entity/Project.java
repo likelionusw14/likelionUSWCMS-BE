@@ -87,4 +87,44 @@ public class Project extends BaseTimeEntity {
         this.endedMonth = endedMonth;
         this.createdByUser = createdByUser;
     }
+
+    public void updateTitle(String title) {
+        this.title = title;
+    }
+
+    public void updateDescription(String description) {
+        this.description = description;
+    }
+
+    public void updateProjectType(String projectType) {
+        this.projectType = projectType;
+    }
+
+    public void updateThumbnailAsset(FileAsset thumbnailAsset) {
+        this.thumbnailAsset = thumbnailAsset;
+    }
+
+    public void updateDeployUrl(String deployUrl) {
+        this.deployUrl = deployUrl;
+    }
+
+    public void updateGithubUrl(String githubUrl) {
+        this.githubUrl = githubUrl;
+    }
+
+    public void updateCohort(Cohort cohort) {
+        this.cohort = cohort;
+    }
+
+    public void updateStartedMonth(LocalDate startedMonth) {
+        this.startedMonth = startedMonth;
+    }
+
+    public void updateEndedMonth(LocalDate endedMonth) {
+        this.endedMonth = endedMonth;
+    }
+
+    public void delete() {
+        this.deletedAt = LocalDateTime.now();
+    }
 }
