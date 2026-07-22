@@ -57,6 +57,7 @@ public class UserService {
     }
 
     // 가입 거절. 승인과 동일하게 PENDING 상태에서만 가능.
+    @SuppressWarnings("UnusedReturnValue")
     @Transactional
     public AccountResponse reject(Long userId, RejectAccountRequest request, Long actorUserId) {
         AppUser actor = findActor(actorUserId);
@@ -67,6 +68,7 @@ public class UserService {
         return AccountResponse.from(target);
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     @Transactional
     public AccountResponse changeRole(Long userId, UpdateRoleRequest request, Long actorUserId) {
         requireActorExists(actorUserId);
@@ -86,6 +88,7 @@ public class UserService {
         return AccountResponse.from(target);
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     @Transactional
     public AccountResponse update(Long userId, UpdateAccountRequest request, Long actorUserId) {
         requireActorExists(actorUserId);
