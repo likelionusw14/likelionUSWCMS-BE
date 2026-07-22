@@ -69,7 +69,7 @@ public class UserService {
 
     @Transactional
     public AccountResponse changeRole(Long userId, UpdateRoleRequest request, Long actorUserId) {
-        findActor(actorUserId);
+        requireActorExists(actorUserId);
         AppUser target = findAccount(userId);
         validateVersion(target.getVersion(), request.version());
         // 스펙 규칙: ACTIVE 회원만 권한 변경 가능.
@@ -88,7 +88,7 @@ public class UserService {
 
     @Transactional
     public AccountResponse update(Long userId, UpdateAccountRequest request, Long actorUserId) {
-        findActor(actorUserId);
+        requireActorExists(actorUserId);
         AppUser target = findAccount(userId);
         validateVersion(target.getVersion(), request.getVersion());
 
@@ -115,7 +115,7 @@ public class UserService {
 
     @Transactional
     public void delete(Long userId, Long actorUserId) {
-        findActor(actorUserId);
+        requireActorExists(actorUserId);
         AppUser target = findAccount(userId);
         // 스펙 규칙: 마지막 ADMIN은 삭제 불가.
         if (target.getSystemRole() == SystemRole.ADMIN
@@ -131,6 +131,14 @@ public class UserService {
     private AppUser findActor(Long actorUserId) {
         return appUserRepository.findById(actorUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
+    }
+
+    // findActor와 하는 검증은 같지만, 조회한 AppUser 자체가 필요 없는 메서드용.
+    // existsById로 존재 여부만 확인해서 "반환값을 버린다"는 인상 자체를 없앰.
+    private void requireActorExists(Long actorUserId) {
+        if (!appUserRepository.existsById(actorUserId)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
     }
 
     // 처리 대상 회원 조회. @SQLRestriction 덕분에 소프트 삭제된 회원은 자동으로 빠짐.

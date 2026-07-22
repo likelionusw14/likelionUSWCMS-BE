@@ -93,11 +93,10 @@ class UserServiceTest {
 
     @Test
     void changeRoleRejectsNonActiveAccount() {
-        AppUser actor = accountWith(1L, AccountStatus.ACTIVE, SystemRole.ADMIN, 0);
         AppUser target = accountWith(2L, AccountStatus.PENDING, SystemRole.MEMBER, 0);
         UpdateRoleRequest request = new UpdateRoleRequest(SystemRole.ADMIN, 0);
 
-        when(appUserRepository.findById(1L)).thenReturn(Optional.of(actor));
+        when(appUserRepository.existsById(1L)).thenReturn(true);
         when(appUserRepository.findById(2L)).thenReturn(Optional.of(target));
 
         assertThatThrownBy(() -> userService.changeRole(2L, request, 1L))
@@ -108,11 +107,10 @@ class UserServiceTest {
 
     @Test
     void changeRoleRejectsDemotingLastAdmin() {
-        AppUser actor = accountWith(1L, AccountStatus.ACTIVE, SystemRole.ADMIN, 0);
         AppUser target = accountWith(2L, AccountStatus.ACTIVE, SystemRole.ADMIN, 0);
         UpdateRoleRequest request = new UpdateRoleRequest(SystemRole.MEMBER, 0);
 
-        when(appUserRepository.findById(1L)).thenReturn(Optional.of(actor));
+        when(appUserRepository.existsById(1L)).thenReturn(true);
         when(appUserRepository.findById(2L)).thenReturn(Optional.of(target));
         when(appUserRepository.countBySystemRole(SystemRole.ADMIN)).thenReturn(1L);
 
@@ -124,11 +122,10 @@ class UserServiceTest {
 
     @Test
     void changeRoleAllowsDemotingWhenOtherAdminsExist() {
-        AppUser actor = accountWith(1L, AccountStatus.ACTIVE, SystemRole.ADMIN, 0);
         AppUser target = accountWith(2L, AccountStatus.ACTIVE, SystemRole.ADMIN, 0);
         UpdateRoleRequest request = new UpdateRoleRequest(SystemRole.MEMBER, 0);
 
-        when(appUserRepository.findById(1L)).thenReturn(Optional.of(actor));
+        when(appUserRepository.existsById(1L)).thenReturn(true);
         when(appUserRepository.findById(2L)).thenReturn(Optional.of(target));
         when(appUserRepository.countBySystemRole(SystemRole.ADMIN)).thenReturn(2L);
 
@@ -139,13 +136,12 @@ class UserServiceTest {
 
     @Test
     void updateAppliesOnlyProvidedFieldsIncludingStudentId() {
-        AppUser actor = accountWith(1L, AccountStatus.ACTIVE, SystemRole.ADMIN, 0);
         AppUser target = accountWith(2L, AccountStatus.ACTIVE, SystemRole.MEMBER, 0);
         UpdateAccountRequest request = new UpdateAccountRequest();
         request.setVersion(0);
         request.setStudentId(" 2021000000 ");
 
-        when(appUserRepository.findById(1L)).thenReturn(Optional.of(actor));
+        when(appUserRepository.existsById(1L)).thenReturn(true);
         when(appUserRepository.findById(2L)).thenReturn(Optional.of(target));
 
         userService.update(2L, request, 1L);
@@ -156,10 +152,9 @@ class UserServiceTest {
 
     @Test
     void deleteRejectsDeletingLastAdmin() {
-        AppUser actor = accountWith(1L, AccountStatus.ACTIVE, SystemRole.ADMIN, 0);
         AppUser target = accountWith(2L, AccountStatus.ACTIVE, SystemRole.ADMIN, 0);
 
-        when(appUserRepository.findById(1L)).thenReturn(Optional.of(actor));
+        when(appUserRepository.existsById(1L)).thenReturn(true);
         when(appUserRepository.findById(2L)).thenReturn(Optional.of(target));
         when(appUserRepository.countBySystemRole(SystemRole.ADMIN)).thenReturn(1L);
 
@@ -171,10 +166,9 @@ class UserServiceTest {
 
     @Test
     void deleteSoftDeletesNonLastAdmin() {
-        AppUser actor = accountWith(1L, AccountStatus.ACTIVE, SystemRole.ADMIN, 0);
         AppUser target = accountWith(2L, AccountStatus.ACTIVE, SystemRole.MEMBER, 0);
 
-        when(appUserRepository.findById(1L)).thenReturn(Optional.of(actor));
+        when(appUserRepository.existsById(1L)).thenReturn(true);
         when(appUserRepository.findById(2L)).thenReturn(Optional.of(target));
 
         userService.delete(2L, 1L);
