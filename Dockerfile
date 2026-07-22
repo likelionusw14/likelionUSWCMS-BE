@@ -12,10 +12,14 @@ RUN ./gradlew dependencies --no-daemon
 COPY src src
 RUN ./gradlew clean bootJar --no-daemon
 
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-COPY --from=builder /app/build/libs/*.jar app.jar
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+
+COPY --chown=appuser:appgroup --from=builder /app/build/libs/*.jar app.jar
+
+USER appuser
 
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
