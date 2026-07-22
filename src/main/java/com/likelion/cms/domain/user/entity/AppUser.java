@@ -126,6 +126,10 @@ public class AppUser extends BaseTimeEntity {
         this.department = department;
     }
 
+    public void updateStudentId(String studentId) {
+        this.studentId = studentId;
+    }
+
     public void updatePart(PartType part) {
         this.part = part;
     }

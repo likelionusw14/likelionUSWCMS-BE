@@ -34,9 +34,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = AdminUserController.class)
+@WebMvcTest(controllers = AdminAccountController.class)
 @Import({AdminAccessGuard.class, SecurityConfig.class})
-class AdminUserControllerTest {
+class AdminAccountControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -45,66 +45,71 @@ class AdminUserControllerTest {
     private UserService userService;
 
     @Test
-    void approveReturnsUpdatedAccount() throws Exception {
-        when(userService.approve(2L, 7L)).thenReturn(accountResponse());
+    void updateStatusApprovesAccount() throws Exception {
+        when(userService.updateStatus(eq(2L), any(), eq(7L))).thenReturn(accountResponse());
 
-        mockMvc.perform(patch("/api/admin/users/2/approve")
-                        .with(authentication(adminAuthentication())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.userId").value(2))
-                .andExpect(jsonPath("$.accountStatus").value("ACTIVE"));
-    }
-
-    @Test
-    void approveRejectsMemberRole() throws Exception {
-        mockMvc.perform(patch("/api/admin/users/2/approve")
-                        .with(authentication(memberAuthentication())))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("C005"));
-        verify(userService, never()).approve(any(), any());
-    }
-
-    @Test
-    void approveRejectsMalformedUserId() throws Exception {
-        mockMvc.perform(patch("/api/admin/users/not-a-number/approve")
-                        .with(authentication(adminAuthentication())))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("C001"));
-        verify(userService, never()).approve(any(), any());
-    }
-
-    @Test
-    void rejectRejectsUnauthenticatedRequest() throws Exception {
-        mockMvc.perform(patch("/api/admin/users/2/reject")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                { "rejectionReason": "서류 미비" }
-                                """))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("C004"));
-        verify(userService, never()).reject(any(), any(), any());
-    }
-
-    @Test
-    void rejectRejectsBlankReason() throws Exception {
-        mockMvc.perform(patch("/api/admin/users/2/reject")
+        mockMvc.perform(patch("/api/admin/accounts/2/status")
                         .with(authentication(adminAuthentication()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                { "rejectionReason": "" }
+                                { "status": "ACTIVE", "version": 0 }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(2))
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
+    void updateStatusRejectsMemberRole() throws Exception {
+        mockMvc.perform(patch("/api/admin/accounts/2/status")
+                        .with(authentication(memberAuthentication()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "status": "ACTIVE", "version": 0 }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("C005"));
+        verify(userService, never()).updateStatus(any(), any(), any());
+    }
+
+    @Test
+    void updateStatusRejectsRejectedWithoutReason() throws Exception {
+        mockMvc.perform(patch("/api/admin/accounts/2/status")
+                        .with(authentication(adminAuthentication()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "status": "REJECTED", "version": 0 }
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("C001"));
-        verify(userService, never()).reject(any(), any(), any());
+        verify(userService, never()).updateStatus(any(), any(), any());
+    }
+
+    @Test
+    void getReturnsAccountDetail() throws Exception {
+        when(userService.get(2L)).thenReturn(accountResponse());
+
+        mockMvc.perform(get("/api/admin/accounts/2")
+                        .with(authentication(adminAuthentication())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(2));
+    }
+
+    @Test
+    void getRejectsUnauthenticatedRequest() throws Exception {
+        mockMvc.perform(get("/api/admin/accounts/2"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("C004"));
+        verify(userService, never()).get(any());
     }
 
     @Test
     void changeRoleRejectsMissingVersion() throws Exception {
-        mockMvc.perform(patch("/api/admin/users/2/role")
+        mockMvc.perform(patch("/api/admin/accounts/2/role")
                         .with(authentication(adminAuthentication()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                { "systemRole": "ADMIN" }
+                                { "role": "ADMIN" }
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("C001"));
@@ -113,7 +118,7 @@ class AdminUserControllerTest {
 
     @Test
     void deleteReturnsNoContent() throws Exception {
-        mockMvc.perform(delete("/api/admin/users/2")
+        mockMvc.perform(delete("/api/admin/accounts/2")
                         .with(authentication(adminAuthentication())))
                 .andExpect(status().isNoContent());
     }
@@ -122,9 +127,9 @@ class AdminUserControllerTest {
     void listReturnsPagedAccounts() throws Exception {
         PageResponse<AccountResponse> page = PageResponse.of(
                 List.of(accountResponse()), PageMeta.of(0, 20, 1, 1, false));
-        when(userService.list(eq(AccountStatus.PENDING), any())).thenReturn(page);
+        when(userService.list(eq(AccountStatus.PENDING), any(), any(), any(), any(), any())).thenReturn(page);
 
-        mockMvc.perform(get("/api/admin/users?status=PENDING")
+        mockMvc.perform(get("/api/admin/accounts?status=PENDING")
                         .with(authentication(adminAuthentication())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].userId").value(2))
@@ -136,7 +141,7 @@ class AdminUserControllerTest {
         return new AccountResponse(
                 2L, "홍길동", "컴퓨터공학과", "2021000000",
                 CohortSummary.of(1L, 5, "5기"), null, SystemRole.MEMBER, AccountStatus.ACTIVE,
-                now, 7L, null, null, null, 0, now, now
+                null, 0, now, now
         );
     }
 

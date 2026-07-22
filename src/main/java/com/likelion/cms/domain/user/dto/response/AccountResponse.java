@@ -9,8 +9,10 @@ import com.likelion.cms.domain.user.entity.SystemRole;
 
 import java.time.LocalDateTime;
 
-// 관리자 회원 API의 공통 응답 DTO. AppUser 엔티티를 그대로 노출하지 않고
-// 응답에 필요한 필드만 골라서 변환함 (kakaoSubject 같은 내부용 필드는 제외).
+// 관리자 회원 API의 공통 응답 DTO. 필드명(role/status)과 구성은
+// OpenAPI 스펙의 AccountResponse 스키마를 그대로 따름 - 프론트가 이 스펙 기준으로
+// 개발하기 때문에, 승인자/거절자/처리시각 같은 내부 감사용 필드는 응답에 노출하지 않음
+// (엔티티엔 계속 남아있고, 나중에 별도 감사 로그 API가 필요하면 그때 노출).
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record AccountResponse(
         Long userId,
@@ -19,12 +21,8 @@ public record AccountResponse(
         String studentId,
         CohortSummary cohort,
         PartType part,
-        SystemRole systemRole,
-        AccountStatus accountStatus,
-        LocalDateTime approvedAt,
-        Long approvedBy,
-        LocalDateTime rejectedAt,
-        Long rejectedBy,
+        SystemRole role,
+        AccountStatus status,
         String rejectionReason,
         Integer version,
         LocalDateTime createdAt,
@@ -40,12 +38,6 @@ public record AccountResponse(
                 appUser.getPart(),
                 appUser.getSystemRole(),
                 appUser.getAccountStatus(),
-                appUser.getApprovedAt(),
-                // 승인/거절 이력이 없으면 approvedByUser 자체가 null이라
-                // .getUserId()를 바로 호출하면 NPE - 널 체크 후 ID만 뽑음.
-                appUser.getApprovedByUser() == null ? null : appUser.getApprovedByUser().getUserId(),
-                appUser.getRejectedAt(),
-                appUser.getRejectedByUser() == null ? null : appUser.getRejectedByUser().getUserId(),
                 appUser.getRejectionReason(),
                 appUser.getVersion(),
                 appUser.getCreatedAt(),

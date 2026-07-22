@@ -1,10 +1,12 @@
 package com.likelion.cms.domain.user.controller;
 
-import com.likelion.cms.domain.user.dto.request.ChangeAccountRoleRequest;
-import com.likelion.cms.domain.user.dto.request.RejectAccountRequest;
+import com.likelion.cms.common.type.PartType;
 import com.likelion.cms.domain.user.dto.request.UpdateAccountRequest;
+import com.likelion.cms.domain.user.dto.request.UpdateAccountStatusRequest;
+import com.likelion.cms.domain.user.dto.request.UpdateRoleRequest;
 import com.likelion.cms.domain.user.dto.response.AccountResponse;
 import com.likelion.cms.domain.user.entity.AccountStatus;
+import com.likelion.cms.domain.user.entity.SystemRole;
 import com.likelion.cms.domain.user.service.UserService;
 import com.likelion.cms.global.response.PageResponse;
 import com.likelion.cms.global.security.AdminAccessGuard;
@@ -28,67 +30,72 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-// 관리자 전용 회원 관리 API. /api/users(일반 사용자용, 아직 미구현)와는
-// 별도 컨트롤러로 분리 - 관리자 액션은 항상 AdminAccessGuard를 거치게 강제하기 위함.
+// 관리자 전용 회원(계정) 관리 API. 경로/DTO 필드명은 OpenAPI 스펙(AdminAccounts 태그)을
+// 그대로 따름 - 프론트가 이 스펙 기준으로 개발하기 때문에, 실제 엔티티/패키지 이름인
+// "User"가 아니라 "Account"로 통일함 (도메인 패키지 자체는 domain/user 그대로 - AppUser
+// 엔티티 이름과 무관하게 API 계약만 스펙에 맞춤).
 @Validated
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/admin/users")
-public class AdminUserController {
+@RequestMapping("/api/admin/accounts")
+public class AdminAccountController {
 
-    // 스펙 상 페이지 size는 최대 100까지만 허용 (한 번에 너무 많은 데이터 조회 방지).
     private static final int MAX_PAGE_SIZE = 100;
 
     private final UserService userService;
     private final AdminAccessGuard adminAccessGuard;
 
-    // GET /api/admin/users?status=PENDING&page=0&size=20
+    // GET /api/admin/accounts?status=&role=&cohortId=&part=&keyword=&page=&size=
     @GetMapping
     public PageResponse<AccountResponse> list(
             @AuthenticationPrincipal CurrentUserPrincipal principal,
             @RequestParam(required = false) AccountStatus status,
+            @RequestParam(required = false) SystemRole role,
+            @RequestParam(required = false) Long cohortId,
+            @RequestParam(required = false) PartType part,
+            @RequestParam(required = false) String keyword,
             @PageableDefault(size = 20) Pageable pageable
     ) {
         adminAccessGuard.requireAdmin(principal);
         // 클라이언트가 size=1000 같은 값을 보내도 서버가 강제로 100까지만 잘라줌.
         Pageable boundedPageable = PageRequest.of(
-                pageable.getPageNumber(), Math.min(pageable.getPageSize(), MAX_PAGE_SIZE), pageable.getSort());
-        return userService.list(status, boundedPageable);
+                pageable.getPageNumber(), Math.min(pageable.getPageSize(), MAX_PAGE_SIZE));
+        return userService.list(status, role, cohortId, part, keyword, boundedPageable);
     }
 
-    // PATCH /api/admin/users/{userId}/approve - 가입 승인 (바디 없음)
-    @PatchMapping("/{userId}/approve")
-    public AccountResponse approve(
+    // GET /api/admin/accounts/{userId} - 회원 상세 조회
+    @GetMapping("/{userId}")
+    public AccountResponse get(
             @AuthenticationPrincipal CurrentUserPrincipal principal,
             @PathVariable @Positive Long userId
     ) {
-        Long actorUserId = adminAccessGuard.requireAdmin(principal);
-        return userService.approve(userId, actorUserId);
+        adminAccessGuard.requireAdmin(principal);
+        return userService.get(userId);
     }
 
-    // PATCH /api/admin/users/{userId}/reject - 가입 거절 (사유 필수)
-    @PatchMapping("/{userId}/reject")
-    public AccountResponse reject(
+    // PATCH /api/admin/accounts/{userId}/status - 가입 승인(ACTIVE) 또는 거절(REJECTED)
+    @PatchMapping("/{userId}/status")
+    public AccountResponse updateStatus(
             @AuthenticationPrincipal CurrentUserPrincipal principal,
             @PathVariable @Positive Long userId,
-            @Valid @RequestBody RejectAccountRequest request
+            @Valid @RequestBody UpdateAccountStatusRequest request
     ) {
         Long actorUserId = adminAccessGuard.requireAdmin(principal);
-        return userService.reject(userId, request, actorUserId);
+        return userService.updateStatus(userId, request, actorUserId);
     }
 
-    // PATCH /api/admin/users/{userId}/role - 권한 변경 (낙관적 락 버전 필요)
+    // PATCH /api/admin/accounts/{userId}/role - 권한 변경 (낙관적 락 버전 필요)
     @PatchMapping("/{userId}/role")
     public AccountResponse changeRole(
             @AuthenticationPrincipal CurrentUserPrincipal principal,
             @PathVariable @Positive Long userId,
-            @Valid @RequestBody ChangeAccountRoleRequest request
+            @Valid @RequestBody UpdateRoleRequest request
     ) {
         Long actorUserId = adminAccessGuard.requireAdmin(principal);
         return userService.changeRole(userId, request, actorUserId);
     }
 
-    // PATCH /api/admin/users/{userId} - 회원 정보 부분 수정
+    // PATCH /api/admin/accounts/{userId} - 회원 정보 부분 수정
     @PatchMapping("/{userId}")
     public AccountResponse update(
             @AuthenticationPrincipal CurrentUserPrincipal principal,
@@ -99,7 +106,7 @@ public class AdminUserController {
         return userService.update(userId, request, actorUserId);
     }
 
-    // DELETE /api/admin/users/{userId} - 소프트 삭제, 성공 시 204 No Content
+    // DELETE /api/admin/accounts/{userId} - 소프트 삭제, 성공 시 204 No Content
     @DeleteMapping("/{userId}")
     public ResponseEntity<Void> delete(
             @AuthenticationPrincipal CurrentUserPrincipal principal,

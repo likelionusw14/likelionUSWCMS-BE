@@ -1,21 +1,25 @@
 package com.likelion.cms.domain.user.service;
 
+import com.likelion.cms.common.type.PartType;
 import com.likelion.cms.domain.cohort.entity.Cohort;
 import com.likelion.cms.domain.cohort.repository.CohortRepository;
-import com.likelion.cms.domain.user.dto.request.ChangeAccountRoleRequest;
-import com.likelion.cms.domain.user.dto.request.RejectAccountRequest;
 import com.likelion.cms.domain.user.dto.request.UpdateAccountRequest;
+import com.likelion.cms.domain.user.dto.request.UpdateAccountStatusRequest;
+import com.likelion.cms.domain.user.dto.request.UpdateRoleRequest;
 import com.likelion.cms.domain.user.dto.response.AccountResponse;
 import com.likelion.cms.domain.user.entity.AccountStatus;
 import com.likelion.cms.domain.user.entity.AppUser;
 import com.likelion.cms.domain.user.entity.SystemRole;
 import com.likelion.cms.domain.user.repository.AppUserRepository;
+import com.likelion.cms.domain.user.repository.AppUserSpecs;
 import com.likelion.cms.global.exception.BusinessException;
 import com.likelion.cms.global.exception.ErrorCode;
 import com.likelion.cms.global.response.PageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,44 +33,55 @@ public class UserService {
     private final AppUserRepository appUserRepository;
     private final CohortRepository cohortRepository;
 
-    // status가 없으면 전체 조회, 있으면 상태로 필터링 (관리자가 "가입 대기 목록만 보기" 같은 용도로 씀).
-    public PageResponse<AccountResponse> list(AccountStatus accountStatus, Pageable pageable) {
-        Page<AppUser> accounts = accountStatus == null
-                ? appUserRepository.findAll(pageable)
-                : appUserRepository.findByAccountStatus(accountStatus, pageable);
+    // 목록 조회: status/role/cohortId/part/keyword 모두 선택 필터. 스펙 기준으로
+    // 정렬은 항상 "가입 신청일(createdAt) 내림차순" 고정 - 클라이언트가 sort를 지정해도 무시.
+    public PageResponse<AccountResponse> list(
+            AccountStatus status, SystemRole role, Long cohortId, PartType part, String keyword, Pageable pageable) {
+        Pageable sortedPageable = PageRequest.of(
+                pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<AppUser> accounts = appUserRepository.findAll(
+                AppUserSpecs.withFilters(status, role, cohortId, part, keyword), sortedPageable);
         return PageResponse.from(accounts.map(AccountResponse::from));
     }
 
+    // 회원 단건 상세 조회.
+    public AccountResponse get(Long userId) {
+        return AccountResponse.from(findAccount(userId));
+    }
+
+    // 가입 승인/거절 통합 처리. status=ACTIVE면 승인, REJECTED면 거절.
+    // 대기 중(PENDING)이 아닌 계정을 다시 승인/거절하는 건 막음.
     @Transactional
-    public AccountResponse approve(Long userId, Long actorUserId) {
+    public AccountResponse updateStatus(Long userId, UpdateAccountStatusRequest request, Long actorUserId) {
         AppUser actor = findActor(actorUserId);
         AppUser target = findAccount(userId);
-        // 이미 승인/거절 처리된 계정을 중복으로 승인 못 하게 막음.
         validatePendingStatus(target);
-        target.approve(actor);
+        validateVersion(target.getVersion(), request.version());
+
+        if (request.status() == AccountStatus.ACTIVE) {
+            target.approve(actor);
+        } else {
+            target.reject(actor, request.rejectionReason().trim());
+        }
         return AccountResponse.from(target);
     }
 
     @Transactional
-    public AccountResponse reject(Long userId, RejectAccountRequest request, Long actorUserId) {
-        AppUser actor = findActor(actorUserId);
-        AppUser target = findAccount(userId);
-        validatePendingStatus(target);
-        target.reject(actor, request.rejectionReason().trim());
-        return AccountResponse.from(target);
-    }
-
-    @Transactional
-    public AccountResponse changeRole(Long userId, ChangeAccountRoleRequest request, Long actorUserId) {
+    public AccountResponse changeRole(Long userId, UpdateRoleRequest request, Long actorUserId) {
         findActor(actorUserId);
         AppUser target = findAccount(userId);
         validateVersion(target.getVersion(), request.version());
-        // 관리자가 실수로 "자기 자신"을 MEMBER로 강등하면 관리 기능 자체에
-        // 아무도 접근 못 하게 잠길 수 있어서, 본인 강등만 예외적으로 막음.
-        if (target.getUserId().equals(actorUserId) && request.systemRole() != SystemRole.ADMIN) {
-            throw new BusinessException(ErrorCode.CONFLICT, "자기 자신의 관리자 권한은 해제할 수 없습니다.");
+        // 스펙 규칙: ACTIVE 회원만 권한 변경 가능.
+        if (target.getAccountStatus() != AccountStatus.ACTIVE) {
+            throw new BusinessException(ErrorCode.CONFLICT, "ACTIVE 상태의 회원만 권한을 변경할 수 있습니다.");
         }
-        target.changeRole(request.systemRole());
+        // 스펙 규칙: 마지막 ADMIN을 MEMBER로 변경하는 건 차단 (관리 기능이 잠기는 걸 방지).
+        if (target.getSystemRole() == SystemRole.ADMIN
+                && request.role() == SystemRole.MEMBER
+                && appUserRepository.countBySystemRole(SystemRole.ADMIN) <= 1) {
+            throw new BusinessException(ErrorCode.CONFLICT, "마지막 관리자는 권한을 해제할 수 없습니다.");
+        }
+        target.changeRole(request.role());
         return AccountResponse.from(target);
     }
 
@@ -84,6 +99,9 @@ public class UserService {
         if (request.isDepartmentProvided()) {
             target.updateDepartment(request.getDepartment().trim());
         }
+        if (request.isStudentIdProvided()) {
+            target.updateStudentId(request.getStudentId().trim());
+        }
         if (request.isPartProvided()) {
             target.updatePart(request.getPart());
         }
@@ -98,10 +116,10 @@ public class UserService {
     public void delete(Long userId, Long actorUserId) {
         findActor(actorUserId);
         AppUser target = findAccount(userId);
-        // changeRole과 같은 이유 - 관리자가 자기 자신을 지워서 스스로 접근 권한을
-        // 잃는 상황을 막음.
-        if (target.getUserId().equals(actorUserId)) {
-            throw new BusinessException(ErrorCode.CONFLICT, "자기 자신은 삭제할 수 없습니다.");
+        // 스펙 규칙: 마지막 ADMIN은 삭제 불가.
+        if (target.getSystemRole() == SystemRole.ADMIN
+                && appUserRepository.countBySystemRole(SystemRole.ADMIN) <= 1) {
+            throw new BusinessException(ErrorCode.CONFLICT, "마지막 관리자는 삭제할 수 없습니다.");
         }
         target.delete();
     }
