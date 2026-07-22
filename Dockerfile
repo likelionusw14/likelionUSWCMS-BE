@@ -1,23 +1,9 @@
-FROM eclipse-temurin:21-jdk AS builder
-WORKDIR /app
-
-COPY gradlew .
-COPY gradle gradle
-COPY build.gradle .
-COPY settings.gradle .
-
-RUN chmod +x ./gradlew
-RUN ./gradlew dependencies --no-daemon
-
-COPY src src
-RUN ./gradlew clean bootJar --no-daemon
-
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 
-COPY --chown=appuser:appgroup --from=builder /app/build/libs/*.jar app.jar
+COPY --chown=appuser:appgroup build/libs/*.jar app.jar
 
 USER appuser
 
