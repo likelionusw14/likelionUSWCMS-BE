@@ -53,6 +53,10 @@ public class UserService {
         validatePendingStatus(target);
         validateVersion(target.getVersion(), request.version());
         target.approve(actor);
+        // @Version은 실제 UPDATE가 나가야(flush) 엔티티의 메모리 값도 올라감.
+        // flush 없이 바로 응답을 만들면 version이 갱신 전 값으로 내려가서,
+        // 클라이언트가 그 값으로 바로 다음 PATCH를 보내면 낙관적 락 충돌이 남.
+        appUserRepository.flush();
         return AccountResponse.from(target);
     }
 
@@ -65,6 +69,7 @@ public class UserService {
         validatePendingStatus(target);
         validateVersion(target.getVersion(), request.version());
         target.reject(actor, request.rejectionReason().trim());
+        appUserRepository.flush();
         return AccountResponse.from(target);
     }
 
@@ -85,6 +90,7 @@ public class UserService {
             throw new BusinessException(ErrorCode.CONFLICT, "마지막 관리자는 권한을 해제할 수 없습니다.");
         }
         target.changeRole(request.role());
+        appUserRepository.flush();
         return AccountResponse.from(target);
     }
 
@@ -113,6 +119,7 @@ public class UserService {
             target.updateCohort(findCohort(request.getCohortId()));
         }
 
+        appUserRepository.flush();
         return AccountResponse.from(target);
     }
 
