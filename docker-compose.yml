@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: likelion-cms-app
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_USERNAME=root
+      - DB_PASSWORD= #your_db_password
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/cms?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+    depends_on:
+      - mysql-db
+    restart: always
+
+  mysql-db:
+    image: mysql:8.0
+    container_name: likelion-cms-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_DATABASE=cms
+      - MYSQL_ROOT_PASSWORD= #your_db_password
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    restart: always
