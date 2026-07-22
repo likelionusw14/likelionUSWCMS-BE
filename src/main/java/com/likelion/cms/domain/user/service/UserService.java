@@ -3,8 +3,9 @@ package com.likelion.cms.domain.user.service;
 import com.likelion.cms.common.type.PartType;
 import com.likelion.cms.domain.cohort.entity.Cohort;
 import com.likelion.cms.domain.cohort.repository.CohortRepository;
+import com.likelion.cms.domain.user.dto.request.ApproveAccountRequest;
+import com.likelion.cms.domain.user.dto.request.RejectAccountRequest;
 import com.likelion.cms.domain.user.dto.request.UpdateAccountRequest;
-import com.likelion.cms.domain.user.dto.request.UpdateAccountStatusRequest;
 import com.likelion.cms.domain.user.dto.request.UpdateRoleRequest;
 import com.likelion.cms.domain.user.dto.response.AccountResponse;
 import com.likelion.cms.domain.user.entity.AccountStatus;
@@ -44,25 +45,25 @@ public class UserService {
         return PageResponse.from(accounts.map(AccountResponse::from));
     }
 
-    // 회원 단건 상세 조회.
-    public AccountResponse get(Long userId) {
-        return AccountResponse.from(findAccount(userId));
-    }
-
-    // 가입 승인/거절 통합 처리. status=ACTIVE면 승인, REJECTED면 거절.
-    // 대기 중(PENDING)이 아닌 계정을 다시 승인/거절하는 건 막음.
+    // 가입 승인. 대기 중(PENDING)이 아닌 계정을 다시 승인하는 건 막음.
     @Transactional
-    public AccountResponse updateStatus(Long userId, UpdateAccountStatusRequest request, Long actorUserId) {
+    public AccountResponse approve(Long userId, ApproveAccountRequest request, Long actorUserId) {
         AppUser actor = findActor(actorUserId);
         AppUser target = findAccount(userId);
         validatePendingStatus(target);
         validateVersion(target.getVersion(), request.version());
+        target.approve(actor);
+        return AccountResponse.from(target);
+    }
 
-        if (request.status() == AccountStatus.ACTIVE) {
-            target.approve(actor);
-        } else {
-            target.reject(actor, request.rejectionReason().trim());
-        }
+    // 가입 거절. 승인과 동일하게 PENDING 상태에서만 가능.
+    @Transactional
+    public AccountResponse reject(Long userId, RejectAccountRequest request, Long actorUserId) {
+        AppUser actor = findActor(actorUserId);
+        AppUser target = findAccount(userId);
+        validatePendingStatus(target);
+        validateVersion(target.getVersion(), request.version());
+        target.reject(actor, request.rejectionReason().trim());
         return AccountResponse.from(target);
     }
 

@@ -45,14 +45,14 @@ class AdminAccountControllerTest {
     private UserService userService;
 
     @Test
-    void updateStatusApprovesAccount() throws Exception {
-        when(userService.updateStatus(eq(2L), any(), eq(7L))).thenReturn(accountResponse());
+    void approveReturnsUpdatedAccount() throws Exception {
+        when(userService.approve(eq(2L), any(), eq(7L))).thenReturn(accountResponse());
 
-        mockMvc.perform(patch("/api/admin/accounts/2/status")
+        mockMvc.perform(patch("/api/admin/accounts/2/approval")
                         .with(authentication(adminAuthentication()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                { "status": "ACTIVE", "version": 0 }
+                                { "version": 0 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value(2))
@@ -60,47 +60,41 @@ class AdminAccountControllerTest {
     }
 
     @Test
-    void updateStatusRejectsMemberRole() throws Exception {
-        mockMvc.perform(patch("/api/admin/accounts/2/status")
+    void approveRejectsMemberRole() throws Exception {
+        mockMvc.perform(patch("/api/admin/accounts/2/approval")
                         .with(authentication(memberAuthentication()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                { "status": "ACTIVE", "version": 0 }
+                                { "version": 0 }
                                 """))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("C005"));
-        verify(userService, never()).updateStatus(any(), any(), any());
+        verify(userService, never()).approve(any(), any(), any());
     }
 
     @Test
-    void updateStatusRejectsRejectedWithoutReason() throws Exception {
-        mockMvc.perform(patch("/api/admin/accounts/2/status")
+    void rejectRejectsBlankReason() throws Exception {
+        mockMvc.perform(patch("/api/admin/accounts/2/rejection")
                         .with(authentication(adminAuthentication()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                { "status": "REJECTED", "version": 0 }
+                                { "rejectionReason": "", "version": 0 }
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("C001"));
-        verify(userService, never()).updateStatus(any(), any(), any());
+        verify(userService, never()).reject(any(), any(), any());
     }
 
     @Test
-    void getReturnsAccountDetail() throws Exception {
-        when(userService.get(2L)).thenReturn(accountResponse());
-
-        mockMvc.perform(get("/api/admin/accounts/2")
-                        .with(authentication(adminAuthentication())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.userId").value(2));
-    }
-
-    @Test
-    void getRejectsUnauthenticatedRequest() throws Exception {
-        mockMvc.perform(get("/api/admin/accounts/2"))
+    void rejectRejectsUnauthenticatedRequest() throws Exception {
+        mockMvc.perform(patch("/api/admin/accounts/2/rejection")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "rejectionReason": "서류 미비", "version": 0 }
+                                """))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("C004"));
-        verify(userService, never()).get(any());
+        verify(userService, never()).reject(any(), any(), any());
     }
 
     @Test

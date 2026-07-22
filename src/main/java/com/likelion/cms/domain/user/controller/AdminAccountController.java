@@ -1,8 +1,9 @@
 package com.likelion.cms.domain.user.controller;
 
 import com.likelion.cms.common.type.PartType;
+import com.likelion.cms.domain.user.dto.request.ApproveAccountRequest;
+import com.likelion.cms.domain.user.dto.request.RejectAccountRequest;
 import com.likelion.cms.domain.user.dto.request.UpdateAccountRequest;
-import com.likelion.cms.domain.user.dto.request.UpdateAccountStatusRequest;
 import com.likelion.cms.domain.user.dto.request.UpdateRoleRequest;
 import com.likelion.cms.domain.user.dto.response.AccountResponse;
 import com.likelion.cms.domain.user.entity.AccountStatus;
@@ -30,10 +31,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-// 관리자 전용 회원(계정) 관리 API. 경로/DTO 필드명은 OpenAPI 스펙(AdminAccounts 태그)을
-// 그대로 따름 - 프론트가 이 스펙 기준으로 개발하기 때문에, 실제 엔티티/패키지 이름인
-// "User"가 아니라 "Account"로 통일함 (도메인 패키지 자체는 domain/user 그대로 - AppUser
-// 엔티티 이름과 무관하게 API 계약만 스펙에 맞춤).
+// 관리자 전용 회원(계정) 관리 API. 라우팅/엔드포인트 구성은 팀에서 작성한
+// admin/accounts API 목록을 그대로 따름 (가입 승인/거절 분리 등).
+// 도메인 패키지 자체는 domain/user 그대로 - AppUser 엔티티 이름과 무관하게
+// API 계약(URL/응답 필드명)만 팀 문서에 맞춤.
 @Validated
 @RestController
 @RequiredArgsConstructor
@@ -63,25 +64,26 @@ public class AdminAccountController {
         return userService.list(status, role, cohortId, part, keyword, boundedPageable);
     }
 
-    // GET /api/admin/accounts/{userId} - 회원 상세 조회
-    @GetMapping("/{userId}")
-    public AccountResponse get(
-            @AuthenticationPrincipal CurrentUserPrincipal principal,
-            @PathVariable @Positive Long userId
-    ) {
-        adminAccessGuard.requireAdmin(principal);
-        return userService.get(userId);
-    }
-
-    // PATCH /api/admin/accounts/{userId}/status - 가입 승인(ACTIVE) 또는 거절(REJECTED)
-    @PatchMapping("/{userId}/status")
-    public AccountResponse updateStatus(
+    // PATCH /api/admin/accounts/{userId}/approval - 가입 승인
+    @PatchMapping("/{userId}/approval")
+    public AccountResponse approve(
             @AuthenticationPrincipal CurrentUserPrincipal principal,
             @PathVariable @Positive Long userId,
-            @Valid @RequestBody UpdateAccountStatusRequest request
+            @Valid @RequestBody ApproveAccountRequest request
     ) {
         Long actorUserId = adminAccessGuard.requireAdmin(principal);
-        return userService.updateStatus(userId, request, actorUserId);
+        return userService.approve(userId, request, actorUserId);
+    }
+
+    // PATCH /api/admin/accounts/{userId}/rejection - 가입 거절 (사유 필수)
+    @PatchMapping("/{userId}/rejection")
+    public AccountResponse reject(
+            @AuthenticationPrincipal CurrentUserPrincipal principal,
+            @PathVariable @Positive Long userId,
+            @Valid @RequestBody RejectAccountRequest request
+    ) {
+        Long actorUserId = adminAccessGuard.requireAdmin(principal);
+        return userService.reject(userId, request, actorUserId);
     }
 
     // PATCH /api/admin/accounts/{userId}/role - 권한 변경 (낙관적 락 버전 필요)
