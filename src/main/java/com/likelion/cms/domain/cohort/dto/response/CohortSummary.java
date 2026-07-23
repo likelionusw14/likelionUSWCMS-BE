@@ -12,10 +12,10 @@ import lombok.Getter;
 
 public class CohortSummary {
     private final Long cohortId;
-    private final int number;
+    private final Integer number;
     private final String name;
 
-    public static CohortSummary of(Long cohortId, int number, String name) {
+    public static CohortSummary of(Long cohortId, Integer number, String name) {
         return new CohortSummary(cohortId, number, name);
     }
 
