@@ -2,12 +2,13 @@ package com.likelion.cms.domain.resource.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.likelion.cms.common.type.PartType;
+import com.likelion.cms.domain.resource.entity.LearningResource;
 import com.likelion.cms.support.file.dto.response.FileAssetResponse;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 
 
 @Getter
@@ -28,13 +29,20 @@ public class LearningResourceResponse {
      * 서버에 저장된 현재 버전과 다르면 충돌로 간주해 요청이 거부됩니다.
      */
     private final int version;
-    private final OffsetDateTime createdAt;
+    private final LocalDateTime createdAt;
+    private final LocalDateTime updatedAt;
 
     public static LearningResourceResponse of(Long resourceId, String title, int week,
                                               PartType targetPart, Long createdBy, FileAssetResponse file,
-                                              int version, OffsetDateTime createdAt) {
-        return new LearningResourceResponse(resourceId, title, week, targetPart, createdBy, file, version, createdAt);
+                                              int version, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        return new LearningResourceResponse(resourceId, title, week, targetPart, createdBy, file,
+                version, createdAt, updatedAt);
     }
 
-
+    public static LearningResourceResponse from(LearningResource resource) {
+        return of(resource.getResourceId(), resource.getTitle(), resource.getWeek(),
+                resource.getTargetPart(), resource.getCreatedByUser().getUserId(),
+                FileAssetResponse.from(resource.getFileAsset()),
+                resource.getVersion(), resource.getCreatedAt(), resource.getUpdatedAt());
+    }
 }
