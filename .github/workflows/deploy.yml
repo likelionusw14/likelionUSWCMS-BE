@@ -21,11 +21,12 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
+          cache: 'gradle'
 
       - name: Build with Gradle
         run: |
           chmod +x ./gradlew
-          ./gradlew clean bootJar --no-daemon
+          ./gradlew clean build --no-daemon
 
       - name: Copy files to Server
         uses: appleboy/scp-action@v0.1.7
