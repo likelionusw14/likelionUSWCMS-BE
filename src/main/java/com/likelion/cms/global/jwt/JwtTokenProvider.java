@@ -18,26 +18,27 @@ public class JwtTokenProvider {
         Date validity = new Date(now.getTime() + validityInMilliseconds);
 
         return Jwts.builder()
-                .subject(String.valueOf(userId))
-                .issuedAt(now)
-                .expiration(validity)
-                .signWith(key)
+                .setSubject(String.valueOf(userId))
+                .setIssuedAt(now)
+                .setExpiration(validity)
+                .signWith(SignatureAlgorithm.HS256, key)
                 .compact();
     }
 
     public Long getUserIdFromToken(String token) {
         Claims claims = Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+                .setSigningKey(key)
+                .parseClaimsJws(token)
+                .getBody();
 
         return Long.parseLong(claims.getSubject());
     }
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
+            Jwts.parser()
+                    .setSigningKey(key)
+                    .parseClaimsJws(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
             return false;

@@ -49,7 +49,7 @@ public class AccountController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody SignupRequest request) {
-        Long userId = accountService.findUserIdByProviderId(request.provider(), request.providerId());
+        Long userId = accountService.login(request);
 
         String token = jwtTokenProvider.createToken(userId);
 
