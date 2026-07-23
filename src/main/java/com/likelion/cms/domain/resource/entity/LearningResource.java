@@ -62,4 +62,20 @@ public class LearningResource extends BaseTimeEntity {
         this.fileAsset = fileAsset;
         this.createdByUser = createdByUser;
     }
+
+    public void updateTitle(String title) {
+        this.title = title;
+    }
+
+    public void updateWeek(Integer week) {
+        this.week = week;
+    }
+
+    public void updateTargetPart(PartType targetPart) {
+        this.targetPart = targetPart;
+    }
+
+    public void updateFileAsset(FileAsset fileAsset) {
+        this.fileAsset = fileAsset;
+    }
 }
