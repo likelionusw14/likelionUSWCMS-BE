@@ -10,6 +10,7 @@ services:
       - DB_USERNAME=root
       - DB_PASSWORD=${DB_PASSWORD}
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/cms?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       - mysql-db
     restart: always
