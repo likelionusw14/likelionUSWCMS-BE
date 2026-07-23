@@ -1,26 +1,27 @@
 package com.likelion.cms.support.file.dto.response;
 
-import com.likelion.cms.support.file.entity.FileAsset;
-import com.likelion.cms.support.file.entity.FilePurpose;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.likelion.cms.common.type.FilePurpose;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
-public record FileAssetResponse(
-        Long fileAssetId,
-        FilePurpose purpose,
-        String originalFileName,
-        String mimeType,
-        Long sizeBytes,
-        LocalDateTime createdAt
-) {
-    public static FileAssetResponse from(FileAsset fileAsset) {
-        return new FileAssetResponse(
-                fileAsset.getFileAssetId(),
-                fileAsset.getPurpose(),
-                fileAsset.getOriginalFileName(),
-                fileAsset.getMimeType(),
-                fileAsset.getSizeBytes(),
-                fileAsset.getCreatedAt()
-        );
+@Getter
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class FileAssetResponse {
+
+    private final Long fileAssetId;
+    private final FilePurpose purpose;
+    private final String originalFileName;
+    private final String mimeType;
+    private final Long sizeBytes;
+    private final OffsetDateTime createdAt;
+
+    public static FileAssetResponse of(Long fileAssetId, FilePurpose purpose, String originalFileName,
+                                       String mimeType, Long sizeBytes, OffsetDateTime createdAt) {
+        return new FileAssetResponse(fileAssetId, purpose, originalFileName, mimeType, sizeBytes, createdAt);
     }
 }
