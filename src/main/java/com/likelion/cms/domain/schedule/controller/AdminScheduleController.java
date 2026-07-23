@@ -34,7 +34,7 @@ public class AdminScheduleController {
     ) {
         Long actorUserId = adminAccessGuard.requireAdmin(principal);
         ScheduleResponse response = scheduleService.create(request, actorUserId);
-        return ResponseEntity.created(URI.create("/api/schedules/" + response.scheduleId())).body(response);
+        return ResponseEntity.created(URI.create("/api/schedules/" + response.getScheduleId())).body(response);
     }
 
     @PatchMapping("/{scheduleId}")
