@@ -132,7 +132,7 @@ class AdminAccountControllerTest {
 
     private AccountResponse accountResponse() {
         LocalDateTime now = LocalDateTime.of(2026, 7, 21, 10, 0);
-        return new AccountResponse(
+        return AccountResponse.of(
                 2L, "홍길동", "컴퓨터공학과", "2021000000",
                 CohortSummary.of(1L, 5, "5기"), null, SystemRole.MEMBER, AccountStatus.ACTIVE,
                 null, 0, now, now

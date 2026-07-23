@@ -58,7 +58,7 @@ class UserServiceTest {
 
         AccountResponse response = userService.approve(2L, request, 1L);
 
-        assertThat(response.userId()).isEqualTo(2L);
+        assertThat(response.getUserId()).isEqualTo(2L);
         verify(target).approve(actor);
     }
 
