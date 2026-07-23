@@ -4,7 +4,7 @@ import com.likelion.cms.domain.cohort.entity.Cohort;
 import com.likelion.cms.domain.cohort.repository.CohortRepository;
 import com.likelion.cms.domain.project.dto.request.CreateProjectRequest;
 import com.likelion.cms.domain.project.dto.request.UpdateProjectRequest;
-import com.likelion.cms.domain.project.dto.response.ProjectResponse;
+import com.likelion.cms.domain.project.dto.response.AdminProjectResponse;
 import com.likelion.cms.domain.project.entity.Project;
 import com.likelion.cms.domain.project.repository.ProjectRepository;
 import com.likelion.cms.domain.user.entity.AppUser;
@@ -73,7 +73,7 @@ class ProjectServiceTest {
             return project;
         });
 
-        ProjectResponse response = projectService.create(request, 1L);
+        AdminProjectResponse response = projectService.create(request, 1L);
 
         assertThat(response.projectId()).isEqualTo(30L);
         assertThat(response.title()).isEqualTo("새 프로젝트");
@@ -132,7 +132,7 @@ class ProjectServiceTest {
         when(appUserRepository.findById(1L)).thenReturn(Optional.of(actor));
         when(projectRepository.findById(30L)).thenReturn(Optional.of(project));
 
-        ProjectResponse response = projectService.update(30L, request, 1L);
+        AdminProjectResponse response = projectService.update(30L, request, 1L);
 
         assertThat(response.title()).isEqualTo("수정된 제목");
         assertThat(response.description()).isEqualTo("기존 설명");

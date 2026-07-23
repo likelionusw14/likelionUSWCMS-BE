@@ -2,7 +2,7 @@ package com.likelion.cms.domain.project.controller;
 
 import com.likelion.cms.domain.project.dto.request.CreateProjectRequest;
 import com.likelion.cms.domain.project.dto.request.UpdateProjectRequest;
-import com.likelion.cms.domain.project.dto.response.ProjectResponse;
+import com.likelion.cms.domain.project.dto.response.AdminProjectResponse;
 import com.likelion.cms.domain.project.service.ProjectService;
 import com.likelion.cms.global.security.AdminAccessGuard;
 import com.likelion.cms.global.security.CurrentUserPrincipal;
@@ -40,20 +40,20 @@ public class AdminProjectController {
     // (같은 키로 중복 요청이 와도 서버가 같은 작업을 두 번 처리하지 않도록 하는 용도 -
     //  단, 지금은 헤더 형식만 검증하고 실제 중복 방지 로직은 별도 구현 안 함)
     @PostMapping
-    public ResponseEntity<ProjectResponse> create(
+    public ResponseEntity<AdminProjectResponse> create(
             @AuthenticationPrincipal CurrentUserPrincipal principal,
             @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @Valid @RequestBody CreateProjectRequest request
     ) {
         Long actorUserId = adminAccessGuard.requireAdmin(principal);
-        ProjectResponse response = projectService.create(request, actorUserId);
+        AdminProjectResponse response = projectService.create(request, actorUserId);
         // 201 Created + Location 헤더로 새로 생긴 리소스의 조회 경로를 알려줌.
         return ResponseEntity.created(URI.create("/api/projects/" + response.projectId())).body(response);
     }
 
     // PATCH /api/admin/projects/{projectId} - 부분 수정
     @PatchMapping("/{projectId}")
-    public ProjectResponse update(
+    public AdminProjectResponse update(
             @AuthenticationPrincipal CurrentUserPrincipal principal,
             @PathVariable @Positive Long projectId,
             @Valid @RequestBody UpdateProjectRequest request

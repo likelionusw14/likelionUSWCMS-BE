@@ -4,7 +4,7 @@ import com.likelion.cms.domain.cohort.entity.Cohort;
 import com.likelion.cms.domain.cohort.repository.CohortRepository;
 import com.likelion.cms.domain.project.dto.request.CreateProjectRequest;
 import com.likelion.cms.domain.project.dto.request.UpdateProjectRequest;
-import com.likelion.cms.domain.project.dto.response.ProjectResponse;
+import com.likelion.cms.domain.project.dto.response.AdminProjectResponse;
 import com.likelion.cms.domain.project.entity.Project;
 import com.likelion.cms.domain.project.repository.ProjectRepository;
 import com.likelion.cms.domain.user.entity.AppUser;
@@ -19,19 +19,25 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ProjectService {
-
     private final ProjectRepository projectRepository;
     private final CohortRepository cohortRepository;
     private final FileAssetRepository fileAssetRepository;
     private final AppUserRepository appUserRepository;
 
+    // TODO: feature/3-project-resource-read-api 쪽 실제 조회 로직으로 교체 예정 (현재 develop 스캐폴딩 그대로).
+    public List<Object> findAllProjects() {
+        return new ArrayList<>();
+    }
+
     @Transactional
-    public ProjectResponse create(CreateProjectRequest request, Long actorUserId) {
+    public AdminProjectResponse create(CreateProjectRequest request, Long actorUserId) {
         AppUser actor = findActor(actorUserId);
         // cohortId는 필수 - 프로젝트는 반드시 특정 기수에 속해야 함 (엔티티에도 not-null).
         Cohort cohort = findCohort(request.cohortId());
@@ -52,11 +58,11 @@ public class ProjectService {
                 .createdByUser(actor)
                 .build();
 
-        return ProjectResponse.from(projectRepository.save(project));
+        return AdminProjectResponse.from(projectRepository.save(project));
     }
 
     @Transactional
-    public ProjectResponse update(Long projectId, UpdateProjectRequest request, Long actorUserId) {
+    public AdminProjectResponse update(Long projectId, UpdateProjectRequest request, Long actorUserId) {
         findActor(actorUserId);
         Project project = findProject(projectId);
         validateVersion(project.getVersion(), request.getVersion());
@@ -99,7 +105,7 @@ public class ProjectService {
         // 모든 필드 반영이 끝난 "최종 상태" 기준으로 마지막에 한 번 더 검증.
         validateDateRange(project.getStartedMonth(), project.getEndedMonth());
 
-        return ProjectResponse.from(project);
+        return AdminProjectResponse.from(project);
     }
 
     @Transactional

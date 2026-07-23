@@ -1,7 +1,7 @@
 package com.likelion.cms.domain.project.controller;
 
 import com.likelion.cms.domain.cohort.dto.response.CohortSummary;
-import com.likelion.cms.domain.project.dto.response.ProjectResponse;
+import com.likelion.cms.domain.project.dto.response.AdminProjectResponse;
 import com.likelion.cms.domain.project.service.ProjectService;
 import com.likelion.cms.domain.user.entity.SystemRole;
 import com.likelion.cms.global.config.SecurityConfig;
@@ -170,9 +170,9 @@ class AdminProjectControllerTest {
                 .andExpect(status().isNoContent());
     }
 
-    private ProjectResponse projectResponse() {
+    private AdminProjectResponse projectResponse() {
         LocalDateTime now = LocalDateTime.of(2026, 7, 21, 10, 0);
-        return new ProjectResponse(
+        return new AdminProjectResponse(
                 20L, "새 프로젝트", "설명", "BACKEND", null, "https://example.com", "https://github.com/example/repo",
                 CohortSummary.of(5L, 5, "5기"), LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 1),
                 7L, 0, now, now
