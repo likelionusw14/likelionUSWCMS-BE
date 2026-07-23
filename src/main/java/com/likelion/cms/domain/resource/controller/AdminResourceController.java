@@ -40,7 +40,7 @@ public class AdminResourceController {
     ) {
         Long actorUserId = adminAccessGuard.requireAdmin(principal);
         LearningResourceResponse response = resourceService.create(request, actorUserId);
-        return ResponseEntity.created(URI.create("/api/resources/" + response.resourceId())).body(response);
+        return ResponseEntity.created(URI.create("/api/resources/" + response.getResourceId())).body(response);
     }
 
     @PatchMapping("/{resourceId}")

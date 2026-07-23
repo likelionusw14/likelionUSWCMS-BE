@@ -1,33 +1,48 @@
 package com.likelion.cms.domain.resource.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.likelion.cms.common.type.PartType;
 import com.likelion.cms.domain.resource.entity.LearningResource;
 import com.likelion.cms.support.file.dto.response.FileAssetResponse;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 import java.time.LocalDateTime;
 
-public record LearningResourceResponse(
-        Long resourceId,
-        String title,
-        Integer week,
-        PartType targetPart,
-        FileAssetResponse file,
-        Long createdBy,
-        Integer version,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt
-) {
+
+@Getter
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+
+public class LearningResourceResponse {
+    private final Long resourceId;
+    private final String title;
+    private final int week;
+    private final PartType targetPart;
+    private final Long createdBy;
+    private final FileAssetResponse file;
+
+    /**
+     * version : 낙관적 락(optimistic locking)을 위한 버전 값입니다.
+     * 수정 요청 시 클라이언트가 조회 시점의 이 값을 그대로 전달해야 하며,
+     * 서버에 저장된 현재 버전과 다르면 충돌로 간주해 요청이 거부됩니다.
+     */
+    private final int version;
+    private final LocalDateTime createdAt;
+    private final LocalDateTime updatedAt;
+
+    public static LearningResourceResponse of(Long resourceId, String title, int week,
+                                              PartType targetPart, Long createdBy, FileAssetResponse file,
+                                              int version, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        return new LearningResourceResponse(resourceId, title, week, targetPart, createdBy, file,
+                version, createdAt, updatedAt);
+    }
+
     public static LearningResourceResponse from(LearningResource resource) {
-        return new LearningResourceResponse(
-                resource.getResourceId(),
-                resource.getTitle(),
-                resource.getWeek(),
-                resource.getTargetPart(),
+        return of(resource.getResourceId(), resource.getTitle(), resource.getWeek(),
+                resource.getTargetPart(), resource.getCreatedByUser().getUserId(),
                 FileAssetResponse.from(resource.getFileAsset()),
-                resource.getCreatedByUser().getUserId(),
-                resource.getVersion(),
-                resource.getCreatedAt(),
-                resource.getUpdatedAt()
-        );
+                resource.getVersion(), resource.getCreatedAt(), resource.getUpdatedAt());
     }
 }
