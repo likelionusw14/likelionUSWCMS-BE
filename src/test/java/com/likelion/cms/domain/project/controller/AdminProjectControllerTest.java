@@ -16,8 +16,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -172,9 +172,9 @@ class AdminProjectControllerTest {
 
     private AdminProjectResponse projectResponse() {
         LocalDateTime now = LocalDateTime.of(2026, 7, 21, 10, 0);
-        return new AdminProjectResponse(
+        return AdminProjectResponse.of(
                 20L, "새 프로젝트", "설명", "BACKEND", null, "https://example.com", "https://github.com/example/repo",
-                CohortSummary.of(5L, 5, "5기"), LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 1),
+                CohortSummary.of(5L, 5, "5기"), YearMonth.of(2026, 1), YearMonth.of(2026, 6),
                 7L, 0, now, now
         );
     }

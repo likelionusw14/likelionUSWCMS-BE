@@ -75,9 +75,9 @@ class ProjectServiceTest {
 
         AdminProjectResponse response = projectService.create(request, 1L);
 
-        assertThat(response.projectId()).isEqualTo(30L);
-        assertThat(response.title()).isEqualTo("새 프로젝트");
-        assertThat(response.thumbnailAssetId()).isNull();
+        assertThat(response.getProjectId()).isEqualTo(30L);
+        assertThat(response.getTitle()).isEqualTo("새 프로젝트");
+        assertThat(response.getThumbnailAssetId()).isNull();
         verify(fileAssetRepository, never()).findById(any());
     }
 
@@ -134,8 +134,8 @@ class ProjectServiceTest {
 
         AdminProjectResponse response = projectService.update(30L, request, 1L);
 
-        assertThat(response.title()).isEqualTo("수정된 제목");
-        assertThat(response.description()).isEqualTo("기존 설명");
+        assertThat(response.getTitle()).isEqualTo("수정된 제목");
+        assertThat(response.getDescription()).isEqualTo("기존 설명");
     }
 
     @Test

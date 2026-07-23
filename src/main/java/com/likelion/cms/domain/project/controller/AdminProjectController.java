@@ -48,7 +48,7 @@ public class AdminProjectController {
         Long actorUserId = adminAccessGuard.requireAdmin(principal);
         AdminProjectResponse response = projectService.create(request, actorUserId);
         // 201 Created + Location 헤더로 새로 생긴 리소스의 조회 경로를 알려줌.
-        return ResponseEntity.created(URI.create("/api/projects/" + response.projectId())).body(response);
+        return ResponseEntity.created(URI.create("/api/projects/" + response.getProjectId())).body(response);
     }
 
     // PATCH /api/admin/projects/{projectId} - 부분 수정
