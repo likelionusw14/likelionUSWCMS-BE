@@ -73,10 +73,10 @@ class ResourceServiceTest {
 
         LearningResourceResponse response = resourceService.create(request, 1L);
 
-        assertThat(response.resourceId()).isEqualTo(20L);
-        assertThat(response.title()).isEqualTo("1주차 자료");
-        assertThat(response.file().fileAssetId()).isEqualTo(10L);
-        assertThat(response.createdBy()).isEqualTo(1L);
+        assertThat(response.getResourceId()).isEqualTo(20L);
+        assertThat(response.getTitle()).isEqualTo("1주차 자료");
+        assertThat(response.getFile().getFileAssetId()).isEqualTo(10L);
+        assertThat(response.getCreatedBy()).isEqualTo(1L);
     }
 
     @Test
@@ -93,8 +93,8 @@ class ResourceServiceTest {
 
         LearningResourceResponse response = resourceService.update(20L, request, 1L);
 
-        assertThat(response.title()).isEqualTo("수정된 제목");
-        assertThat(response.week()).isEqualTo(1);
+        assertThat(response.getTitle()).isEqualTo("수정된 제목");
+        assertThat(response.getWeek()).isEqualTo(1);
         verify(fileAssetRepository, never()).findById(any());
     }
 
