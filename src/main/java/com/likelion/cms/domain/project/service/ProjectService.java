@@ -105,6 +105,10 @@ public class ProjectService {
         // 모든 필드 반영이 끝난 "최종 상태" 기준으로 마지막에 한 번 더 검증.
         validateDateRange(project.getStartedMonth(), project.getEndedMonth());
 
+        // @Version은 실제 UPDATE가 나가야(flush) 엔티티의 메모리 값도 올라감.
+        // flush 없이 바로 응답을 만들면 version이 갱신 전 값으로 내려가서,
+        // 클라이언트가 그 값으로 바로 다음 PATCH를 보내면 낙관적 락 충돌이 남.
+        projectRepository.flush();
         return AdminProjectResponse.from(project);
     }
 
