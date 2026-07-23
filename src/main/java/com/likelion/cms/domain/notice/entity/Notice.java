@@ -73,4 +73,28 @@ public class Notice extends BaseTimeEntity {
         this.createdByUser = createdByUser;
         this.publishedAt = publishedAt;
     }
+
+    public void updateTitle(String title) {
+        this.title = title;
+    }
+
+    public void updateContent(String content) {
+        this.content = content;
+    }
+
+    public void updateTag(NoticeTag tag) {
+        this.tag = tag;
+    }
+
+    public void updateIsFixed(Boolean isFixed) {
+        this.isFixed = isFixed;
+    }
+
+    public void updateExternalUrl(String externalUrl) {
+        this.externalUrl = externalUrl;
+    }
+
+    public void updateImageAsset(FileAsset imageAsset) {
+        this.imageAsset = imageAsset;
+    }
 }
