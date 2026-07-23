@@ -8,7 +8,7 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.List;
 
@@ -30,20 +30,20 @@ public class ProjectResponse {
      * 수정 요청 시 클라이언트가 조회 시점의 이 값을 그대로 전달해야 하며,
      * 서버에 저장된 현재 버전과 다르면 충돌로 간주해 요청이 거부됩니다.
      */
-    private final int version;
+    private final Integer version;
     private final ProjectType projectType;
     private final FileView thumbnail;
     private final CohortSummary cohort;
     private final List<ProjectParticipantResponse> participants;
-    private final OffsetDateTime createdAt;
-    private final OffsetDateTime updatedAt;
+    private final LocalDateTime createdAt;
+    private final LocalDateTime updatedAt;
 
 
     public static ProjectResponse of(
             Long projectId, String title, String description, String deployUrl,
-            String githubUrl, YearMonth startedMonth, YearMonth endedMonth, int version, FileView thumbnail,
+            String githubUrl, YearMonth startedMonth, YearMonth endedMonth, Integer version, FileView thumbnail,
             ProjectType projectType, CohortSummary cohort, List<ProjectParticipantResponse> participants,
-            OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+            LocalDateTime createdAt, LocalDateTime updatedAt) {
         return new ProjectResponse(projectId, title, description, deployUrl, githubUrl, startedMonth, endedMonth,
                 version, projectType, thumbnail, cohort, participants, createdAt, updatedAt);
     }
