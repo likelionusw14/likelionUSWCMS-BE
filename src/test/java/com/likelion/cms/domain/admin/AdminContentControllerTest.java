@@ -59,11 +59,11 @@ class AdminContentControllerTest {
     @Test
     void createResourceReturnsCreatedResponseAndLocation() throws Exception {
         LocalDateTime now = LocalDateTime.of(2026, 7, 20, 10, 0);
-        FileAssetResponse file = new FileAssetResponse(
+        FileAssetResponse file = FileAssetResponse.of(
                 10L, FilePurpose.LEARNING_RESOURCE, "resource.pdf", "application/pdf", 1024L, now
         );
-        LearningResourceResponse response = new LearningResourceResponse(
-                20L, "1주차 자료", 1, PartType.BACKEND, file, 7L, 0, now, now
+        LearningResourceResponse response = LearningResourceResponse.of(
+                20L, "1주차 자료", 1, PartType.BACKEND, 7L, file, 0, now, now
         );
         when(resourceService.create(any(), eq(7L))).thenReturn(response);
 
