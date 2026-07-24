@@ -16,6 +16,16 @@
 
 SET FOREIGN_KEY_CHECKS = 0;
 
+CREATE TABLE `Account` (
+  `cohortId` int DEFAULT NULL,
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `part` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `provider` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `providerId` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `accountStatus` enum('ACTIVE','PENDING') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE `ActivityCertificate` (
   `activityEndedAt` date DEFAULT NULL,
   `activityStartedAt` date DEFAULT NULL,

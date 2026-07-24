@@ -6,6 +6,13 @@
 - JDK 21
 - Docker (로컬 MySQL 실행용)
 
+## 환경 변수
+
+| 변수 | 설명 |
+| --- | --- |
+| `DB_PASSWORD` | MySQL root 비밀번호 |
+| `JWT_SECRET` | JWT 서명 키. HS256 을 쓰므로 32자 이상 문자열 |
+
 ## 로컬 실행
 
 ### 1. MySQL 기동
@@ -29,9 +36,10 @@ mysql -h 127.0.0.1 -P 3306 -u root -p cms < db/schema.sql
 ### 3. 애플리케이션 실행
 
 ```bash
-DB_PASSWORD=<위와_동일한_비밀번호> ./gradlew bootRun
+DB_PASSWORD=<위와_동일한_비밀번호> JWT_SECRET=<32자_이상_문자열> ./gradlew bootRun
 ```
 
+`JWT_SECRET` 은 기본값이 없어서 지정하지 않으면 기동이 실패한다.
 `http://localhost:8080/health` 가 `OK` 를 반환하면 정상이다.
 
 ## 테스트
