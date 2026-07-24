@@ -55,13 +55,15 @@ public class ScheduleService {
         validateVersion(schedule.getVersion(), request.getVersion());
 
         String finalTitle = request.isTitleProvided() ? request.getTitle().trim() : schedule.getTitle();
-        String finalDescription = request.isDescriptionProvided() ? request.getDescription().trim() : schedule.getDescription();
+        String finalDescription = request.isDescriptionProvided()
+                ? (request.getDescription() == null ? null : request.getDescription().trim())
+                : schedule.getDescription();
         LocalDate finalScheduleDate = request.isScheduleDateProvided() ? request.getScheduleDate() : schedule.getScheduleDate();
         Boolean finalIsAllDay = request.isAllDayProvided() ? request.getIsAllDay() : schedule.getIsAllDay();
         LocalTime finalStartTime = request.isStartTimeProvided() ? request.getStartTime() : schedule.getStartTime();
         String finalLocation = request.isLocationProvided() ? request.getLocation() : schedule.getLocation();
 
-        if (Boolean.TRUE.equals(finalIsAllDay)) {
+        if (request.isAllDayProvided() && Boolean.TRUE.equals(request.getIsAllDay())) {
             finalStartTime = null;
         }
         validateAllDayCombination(finalIsAllDay, finalStartTime);
