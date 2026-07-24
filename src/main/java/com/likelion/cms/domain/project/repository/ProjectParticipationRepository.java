@@ -3,5 +3,10 @@ package com.likelion.cms.domain.project.repository;
 import com.likelion.cms.domain.project.entity.ProjectParticipation;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
+
 public interface ProjectParticipationRepository extends JpaRepository<ProjectParticipation, Long> {
+    List<ProjectParticipation> findByProject_ProjectIdIn(List<Long> projectIds);
+
+    List<ProjectParticipation> findByProject_ProjectId(Long projectId);
 }
