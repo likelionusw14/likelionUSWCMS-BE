@@ -161,7 +161,7 @@ class AdminContentControllerTest {
     @Test
     void updateNoticePreservesExplicitNullForImageRemoval() throws Exception {
         LocalDateTime now = LocalDateTime.of(2026, 7, 20, 10, 0);
-        NoticeResponse response = new NoticeResponse(
+        NoticeResponse response = NoticeResponse.of(
                 30L, "공지", "내용", NoticeTag.OTHER, false, null, 7L, now, 2, now, now
         );
         when(noticeService.update(eq(30L), any(), eq(7L))).thenReturn(response);
