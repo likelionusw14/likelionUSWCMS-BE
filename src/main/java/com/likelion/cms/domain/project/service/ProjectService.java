@@ -23,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.YearMonth;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -45,7 +44,7 @@ public class ProjectService {
 
         List<Long> projectIds = projects.getContent().stream().map(Project::getProjectId).toList();
         Map<Long, List<ProjectParticipantResponse>> participantsByProject = projectParticipationRepository
-                .findByProject_ProjectIdIn(projectIds).stream()
+                .findByProjectIdsWithUser(projectIds).stream()
                 .collect(Collectors.groupingBy(
                         participation -> participation.getProject().getProjectId(),
                         Collectors.mapping(this::toParticipantResponse, Collectors.toList())
@@ -63,7 +62,7 @@ public class ProjectService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
 
         List<ProjectParticipantResponse> participants = projectParticipationRepository
-                .findByProject_ProjectId(projectId).stream()
+                .findByProjectIdWithUser(projectId).stream()
                 .map(this::toParticipantResponse)
                 .toList();
 
@@ -84,8 +83,8 @@ public class ProjectService {
                 ProjectType.valueOf(project.getProjectType()),
                 toCohortSummary(project.getCohort()),
                 participants,
-                project.getCreatedAt().atOffset(ZoneOffset.UTC),
-                project.getUpdatedAt().atOffset(ZoneOffset.UTC)
+                project.getCreatedAt(),
+                project.getUpdatedAt()
         );
     }
 
