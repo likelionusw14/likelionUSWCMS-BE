@@ -24,8 +24,21 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
 
+kakao:
+  client-id: ${KAKAO_CLIENT_ID}
+  client-secret: ${KAKAO_CLIENT_SECRET:}
+  redirect-uri: ${KAKAO_REDIRECT_URI}
+
+# TODO: replace these placeholder defaults once the frontend team confirms real routes.
+app:
+  frontend:
+    app-redirect-uri: ${FRONTEND_APP_REDIRECT_URI:https://placeholder.example.com/app}
+    onboarding-redirect-uri: ${FRONTEND_ONBOARDING_REDIRECT_URI:https://placeholder.example.com/onboarding}
+    error-redirect-uri: ${FRONTEND_ERROR_REDIRECT_URI:https://placeholder.example.com/error}
+
 jwt:
   secret: ${JWT_SECRET}
+  access-token-validity-seconds: ${JWT_ACCESS_TOKEN_VALIDITY_SECONDS:1800}
 
 server:
   port: 8080
