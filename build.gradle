@@ -36,6 +36,9 @@ dependencies {
     // or Boot will try to authenticate our own HS256 Bearer tokens against Kakao's JWKS too).
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 
+    // API 문서 (Swagger UI / OpenAPI 3)
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6'
+
     // QueryDSL
     implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta'
     annotationProcessor 'com.querydsl:querydsl-apt:5.1.0:jakarta'
