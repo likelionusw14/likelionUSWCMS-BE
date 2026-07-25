@@ -1,5 +1,6 @@
 package com.likelion.cms.domain.project.service;
 
+import com.likelion.cms.common.type.ProjectType;
 import com.likelion.cms.domain.cohort.entity.Cohort;
 import com.likelion.cms.domain.cohort.repository.CohortRepository;
 import com.likelion.cms.domain.project.dto.request.CreateProjectRequest;
@@ -66,7 +67,7 @@ class ProjectServiceTest {
         AppUser actor = actor(1L);
         Cohort cohort = cohort(5L);
         CreateProjectRequest request = new CreateProjectRequest(
-                " 새 프로젝트 ", " 설명 ", " BACKEND ", null, "https://example.com", "https://github.com/example/repo",
+                " 새 프로젝트 ", " 설명 ", ProjectType.HACKATHON, null, "https://example.com", "https://github.com/example/repo",
                 5L, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 1)
         );
 
@@ -90,7 +91,7 @@ class ProjectServiceTest {
     void createRejectsMissingCohort() {
         AppUser actor = actor(1L);
         CreateProjectRequest request = new CreateProjectRequest(
-                "프로젝트", "설명", "BACKEND", null, null, null,
+                "프로젝트", "설명", ProjectType.HACKATHON, null, null, null,
                 5L, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 1)
         );
 
@@ -109,7 +110,7 @@ class ProjectServiceTest {
         Cohort cohort = cohort(5L);
         FileAsset wrongPurposeAsset = fileAsset(FilePurpose.NOTICE_IMAGE);
         CreateProjectRequest request = new CreateProjectRequest(
-                "프로젝트", "설명", "BACKEND", 10L, null, null,
+                "프로젝트", "설명", ProjectType.HACKATHON, 10L, null, null,
                 5L, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 1)
         );
 
@@ -220,7 +221,7 @@ class ProjectServiceTest {
         return Project.builder()
                 .title("기존 제목")
                 .description("기존 설명")
-                .projectType("BACKEND")
+                .projectType(ProjectType.HACKATHON.name())
                 .thumbnailAsset(thumbnailAsset)
                 .deployUrl("https://example.com/old")
                 .githubUrl("https://github.com/example/old")

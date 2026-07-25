@@ -1,5 +1,6 @@
 package com.likelion.cms.domain.project.controller;
 
+import com.likelion.cms.common.type.ProjectType;
 import com.likelion.cms.domain.cohort.dto.response.CohortSummary;
 import com.likelion.cms.domain.project.dto.response.AdminProjectResponse;
 import com.likelion.cms.domain.project.service.ProjectService;
@@ -64,7 +65,7 @@ class AdminProjectControllerTest {
                                 {
                                   "title": "새 프로젝트",
                                   "description": "설명",
-                                  "projectType": "BACKEND",
+                                  "projectType": "HACKATHON",
                                   "cohortId": 5,
                                   "startedMonth": "2026-01-01",
                                   "endedMonth": "2026-06-01"
@@ -84,7 +85,7 @@ class AdminProjectControllerTest {
                                 {
                                   "title": "새 프로젝트",
                                   "description": "설명",
-                                  "projectType": "BACKEND",
+                                  "projectType": "HACKATHON",
                                   "cohortId": 5,
                                   "startedMonth": "2026-01-01",
                                   "endedMonth": "2026-06-01"
@@ -105,7 +106,7 @@ class AdminProjectControllerTest {
                                 {
                                   "title": "새 프로젝트",
                                   "description": "설명",
-                                  "projectType": "BACKEND",
+                                  "projectType": "HACKATHON",
                                   "cohortId": 5,
                                   "startedMonth": "2026-01-01",
                                   "endedMonth": "2026-06-01"
@@ -126,7 +127,7 @@ class AdminProjectControllerTest {
                                 {
                                   "title": "새 프로젝트",
                                   "description": "설명",
-                                  "projectType": "BACKEND",
+                                  "projectType": "HACKATHON",
                                   "cohortId": 5,
                                   "startedMonth": "2026-01-01",
                                   "endedMonth": "2026-06-01",
@@ -180,7 +181,7 @@ class AdminProjectControllerTest {
     private AdminProjectResponse projectResponse() {
         LocalDateTime now = LocalDateTime.of(2026, 7, 21, 10, 0);
         return AdminProjectResponse.of(
-                20L, "새 프로젝트", "설명", "BACKEND", null, "https://example.com", "https://github.com/example/repo",
+                20L, "새 프로젝트", "설명", ProjectType.HACKATHON, null, "https://example.com", "https://github.com/example/repo",
                 CohortSummary.of(5L, 5, "5기"), YearMonth.of(2026, 1), YearMonth.of(2026, 6),
                 7L, 0, now, now
         );

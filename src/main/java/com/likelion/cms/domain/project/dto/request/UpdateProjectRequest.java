@@ -2,6 +2,7 @@ package com.likelion.cms.domain.project.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import com.likelion.cms.common.type.ProjectType;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -12,6 +13,7 @@ import java.time.LocalDate;
 
 // PATCH 부분 수정 요청. UpdateAccountRequest와 동일한 xxxProvided 패턴 -
 // "필드를 안 보냄(유지)"과 "null로 보냄(제거)"을 구분하기 위해 @JsonSetter를 직접 씀.
+// projectType은 CreateProjectRequest와 같은 이유로 String이 아니라 ProjectType enum.
 @Getter
 @NoArgsConstructor
 public class UpdateProjectRequest {
@@ -22,7 +24,7 @@ public class UpdateProjectRequest {
 
     private String title;
     private String description;
-    private String projectType;
+    private ProjectType projectType;
     private Long thumbnailAssetId;
     private String deployUrl;
     private String githubUrl;
@@ -67,7 +69,7 @@ public class UpdateProjectRequest {
     }
 
     @JsonSetter
-    public void setProjectType(String projectType) {
+    public void setProjectType(ProjectType projectType) {
         this.projectTypeProvided = true;
         this.projectType = projectType;
     }
@@ -124,8 +126,7 @@ public class UpdateProjectRequest {
                 || (title != null && !title.isBlank() && title.length() <= 150);
         boolean validDescription = !descriptionProvided
                 || (description != null && !description.isBlank() && description.length() <= 20000);
-        boolean validProjectType = !projectTypeProvided
-                || (projectType != null && !projectType.isBlank() && projectType.length() <= 50);
+        boolean validProjectType = !projectTypeProvided || projectType != null;
         boolean validThumbnailAssetId = !thumbnailAssetIdProvided
                 || thumbnailAssetId == null || thumbnailAssetId > 0;
         boolean validDeployUrl = !deployUrlProvided

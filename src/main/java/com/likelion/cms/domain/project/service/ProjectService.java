@@ -140,7 +140,7 @@ public class ProjectService {
         Project project = Project.builder()
                 .title(request.title().trim())
                 .description(request.description().trim())
-                .projectType(request.projectType().trim())
+                .projectType(request.projectType().name())
                 .thumbnailAsset(thumbnailAsset)
                 .deployUrl(request.deployUrl())
                 .githubUrl(request.githubUrl())
@@ -167,7 +167,7 @@ public class ProjectService {
             project.updateDescription(request.getDescription().trim());
         }
         if (request.isProjectTypeProvided()) {
-            project.updateProjectType(request.getProjectType().trim());
+            project.updateProjectType(request.getProjectType().name());
         }
         // thumbnailAssetId: 키 자체를 안 보내면(false) 기존 값 유지,
         // "thumbnailAssetId": null 로 명시적으로 보내면 썸네일 제거,
