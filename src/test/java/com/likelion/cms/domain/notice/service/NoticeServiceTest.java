@@ -75,7 +75,7 @@ class NoticeServiceTest {
         PageResponse<NoticeResponse> response = noticeService.list(null, 0, 20);
 
         assertThat(response.getItems()).hasSize(2);
-        assertThat(response.getItems().get(0).noticeId()).isEqualTo(1L);
+        assertThat(response.getItems().get(0).getNoticeId()).isEqualTo(1L);
         assertThat(response.getPage().getTotalElements()).isEqualTo(2);
         assertThat(response.getPage().getTotalPages()).isEqualTo(1);
         assertThat(response.getPage().isHasNext()).isFalse();
@@ -95,7 +95,7 @@ class NoticeServiceTest {
         PageResponse<NoticeResponse> response = noticeService.list(NoticeTag.PROJECT, 0, 20);
 
         assertThat(response.getItems()).hasSize(1);
-        assertThat(response.getItems().get(0).tag()).isEqualTo(NoticeTag.PROJECT);
+        assertThat(response.getItems().get(0).getTag()).isEqualTo(NoticeTag.PROJECT);
     }
 
     @Test
@@ -108,8 +108,8 @@ class NoticeServiceTest {
 
         NoticeResponse response = noticeService.get(30L);
 
-        assertThat(response.noticeId()).isEqualTo(30L);
-        assertThat(response.title()).isEqualTo("기존 공지");
+        assertThat(response.getNoticeId()).isEqualTo(30L);
+        assertThat(response.getTitle()).isEqualTo("기존 공지");
     }
 
     @Test
