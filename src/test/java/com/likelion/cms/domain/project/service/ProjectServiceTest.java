@@ -6,6 +6,7 @@ import com.likelion.cms.domain.project.dto.request.CreateProjectRequest;
 import com.likelion.cms.domain.project.dto.request.UpdateProjectRequest;
 import com.likelion.cms.domain.project.dto.response.AdminProjectResponse;
 import com.likelion.cms.domain.project.entity.Project;
+import com.likelion.cms.domain.project.repository.ProjectParticipationRepository;
 import com.likelion.cms.domain.project.repository.ProjectRepository;
 import com.likelion.cms.domain.user.entity.AppUser;
 import com.likelion.cms.domain.user.repository.AppUserRepository;
@@ -41,6 +42,9 @@ class ProjectServiceTest {
     private ProjectRepository projectRepository;
 
     @Mock
+    private ProjectParticipationRepository projectParticipationRepository;
+
+    @Mock
     private CohortRepository cohortRepository;
 
     @Mock
@@ -53,7 +57,8 @@ class ProjectServiceTest {
 
     @BeforeEach
     void setUp() {
-        projectService = new ProjectService(projectRepository, cohortRepository, fileAssetRepository, appUserRepository);
+        projectService = new ProjectService(
+                projectRepository, projectParticipationRepository, cohortRepository, fileAssetRepository, appUserRepository);
     }
 
     @Test

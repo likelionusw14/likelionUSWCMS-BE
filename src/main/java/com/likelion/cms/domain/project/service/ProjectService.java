@@ -1,40 +1,132 @@
 package com.likelion.cms.domain.project.service;
 
+import com.likelion.cms.common.type.ProjectType;
+import com.likelion.cms.domain.cohort.dto.response.CohortSummary;
 import com.likelion.cms.domain.cohort.entity.Cohort;
 import com.likelion.cms.domain.cohort.repository.CohortRepository;
 import com.likelion.cms.domain.project.dto.request.CreateProjectRequest;
 import com.likelion.cms.domain.project.dto.request.UpdateProjectRequest;
 import com.likelion.cms.domain.project.dto.response.AdminProjectResponse;
+import com.likelion.cms.domain.project.dto.response.ProjectParticipantResponse;
+import com.likelion.cms.domain.project.dto.response.ProjectResponse;
 import com.likelion.cms.domain.project.entity.Project;
+import com.likelion.cms.domain.project.entity.ProjectParticipation;
+import com.likelion.cms.domain.project.repository.ProjectParticipationRepository;
 import com.likelion.cms.domain.project.repository.ProjectRepository;
 import com.likelion.cms.domain.user.entity.AppUser;
 import com.likelion.cms.domain.user.repository.AppUserRepository;
 import com.likelion.cms.global.exception.BusinessException;
 import com.likelion.cms.global.exception.ErrorCode;
+import com.likelion.cms.global.response.PageMeta;
+import com.likelion.cms.global.response.PageResponse;
+import com.likelion.cms.support.file.dto.response.FileAssetResponse;
+import com.likelion.cms.support.file.dto.response.FileView;
 import com.likelion.cms.support.file.entity.FileAsset;
 import com.likelion.cms.support.file.entity.FilePurpose;
 import com.likelion.cms.support.file.repository.FileAssetRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
+import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ProjectService {
+
     private final ProjectRepository projectRepository;
+    private final ProjectParticipationRepository projectParticipationRepository;
     private final CohortRepository cohortRepository;
     private final FileAssetRepository fileAssetRepository;
     private final AppUserRepository appUserRepository;
 
-    // TODO: feature/3-project-resource-read-api 쪽 실제 조회 로직으로 교체 예정 (현재 develop 스캐폴딩 그대로).
-    public List<Object> findAllProjects() {
-        return new ArrayList<>();
+    // ===== 여기부터 일반 조회 API (#3/#36, 다른 PR에서 구현) =====
+
+    public PageResponse<ProjectResponse> getProjects(Long cohortId, List<ProjectType> projectTypes, int page, int size) {
+        List<String> projectTypeNames = (projectTypes == null || projectTypes.isEmpty())
+                ? null
+                : projectTypes.stream().map(Enum::name).toList();
+
+        Page<Project> projects = projectRepository.findProjects(cohortId, projectTypeNames, PageRequest.of(page, size));
+
+        List<Long> projectIds = projects.getContent().stream().map(Project::getProjectId).toList();
+        Map<Long, List<ProjectParticipantResponse>> participantsByProject = projectParticipationRepository
+                .findByProjectIdsWithUser(projectIds).stream()
+                .collect(Collectors.groupingBy(
+                        participation -> participation.getProject().getProjectId(),
+                        Collectors.mapping(this::toParticipantResponse, Collectors.toList())
+                ));
+
+        List<ProjectResponse> items = projects.getContent().stream()
+                .map(project -> toResponse(project, participantsByProject.getOrDefault(project.getProjectId(), List.of())))
+                .toList();
+
+        return PageResponse.of(items, toPageMeta(projects));
     }
+
+    public ProjectResponse getProject(Long projectId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        List<ProjectParticipantResponse> participants = projectParticipationRepository
+                .findByProjectIdWithUser(projectId).stream()
+                .map(this::toParticipantResponse)
+                .toList();
+
+        return toResponse(project, participants);
+    }
+
+    private ProjectResponse toResponse(Project project, List<ProjectParticipantResponse> participants) {
+        return ProjectResponse.of(
+                project.getProjectId(),
+                project.getTitle(),
+                project.getDescription(),
+                project.getDeployUrl(),
+                project.getGithubUrl(),
+                YearMonth.from(project.getStartedMonth()),
+                YearMonth.from(project.getEndedMonth()),
+                project.getVersion(),
+                toFileView(project.getThumbnailAsset()),
+                ProjectType.valueOf(project.getProjectType()),
+                toCohortSummary(project.getCohort()),
+                participants,
+                project.getCreatedAt(),
+                project.getUpdatedAt()
+        );
+    }
+
+    private ProjectParticipantResponse toParticipantResponse(ProjectParticipation participation) {
+        return ProjectParticipantResponse.of(
+                participation.getUser().getUserId(),
+                participation.getUser().getName(),
+                participation.getRole()
+        );
+    }
+
+    private CohortSummary toCohortSummary(Cohort cohort) {
+        return CohortSummary.of(cohort.getCohortId(), cohort.getNumber(), cohort.getName());
+    }
+
+    private FileView toFileView(FileAsset thumbnailAsset) {
+        if (thumbnailAsset == null) {
+            return null;
+        }
+        // presign 인프라가 아직 없어 downloadUrl/expiresAt은 비워둠
+        return FileView.of(FileAssetResponse.from(thumbnailAsset), null, null);
+    }
+
+    private PageMeta toPageMeta(Page<?> page) {
+        return PageMeta.of(page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages(), page.hasNext());
+    }
+
+    // ===== 여기부터 관리자 등록/수정/삭제 API (이 이슈에서 구현) =====
 
     @Transactional
     public AdminProjectResponse create(CreateProjectRequest request, Long actorUserId) {

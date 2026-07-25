@@ -2,10 +2,6 @@
 
 새 API를 만들 때 응답 DTO는 아래 규칙을 따른다.
 
-이 문서는 PR #19(DTO 스타일 충돌로 인한 빌드 실패)를 계기로 정리했다. 같은 응답 DTO를
-두 사람이 각자 다른 스타일로 만들어 충돌한 것이 원인이었고, 재발을 막기 위해 형태를
-하나로 고정한다.
-
 ---
 
 ## 1. 형태 — Lombok 클래스
@@ -74,10 +70,10 @@ public static LearningResourceResponse from(LearningResource resource) {
 
 시점이 아닌 날짜·기간 표현은 정밀도를 억지로 올리지 말고 의미에 맞는 java.time 타입을 쓴다.
 
-| 의미 | 타입 | 예 |
-| --- | --- | --- |
+| 의미    | 타입        | 예                                            |
+| ------- | ----------- | --------------------------------------------- |
 | 월 단위 | `YearMonth` | `ProjectResponse.startedMonth` / `endedMonth` |
-| 일 단위 | `LocalDate` | 활동 일자 등 |
+| 일 단위 | `LocalDate` | 활동 일자 등                                  |
 
 문자열로 내리면 `yyyy-MM` 같은 포맷 규칙을 따로 합의해야 하고 값 검증도 되지 않는다.
 타입으로 표현하면 의미가 코드에 드러나고 직렬화 포맷도 일관된다.
@@ -85,9 +81,10 @@ public static LearningResourceResponse from(LearningResource resource) {
 엔티티 컬럼 타입과 다를 수 있다. `Project.startedMonth` 는 `LocalDate` 이므로 DTO 매핑
 시 `YearMonth.from(...)` 으로 변환한다. 이 변환은 `from(entity)` 안에서 처리한다.
 
-> 참고: 애플리케이션 컨테이너에 `TZ` 가 설정되어 있지 않아 JVM 기본 타임존이 UTC 로
-> 동작할 가능성이 있다. 이 경우 저장되는 벽시계 값 자체가 KST 와 9시간 어긋난다.
-> 별도로 확인·처리가 필요하다.
+> 참고: 저장되는 시각은 서버(컨테이너)의 JVM 기본 타임존을 따른다. 이 값이 UTC 이면
+> KST 와 9시간 어긋나므로, `Dockerfile` 에서 `TZ=Asia/Seoul` 과
+> `-Duser.timezone=Asia/Seoul` 로 KST 를 고정한다. 새 실행 환경을 추가할 때도 같은
+> 타임존을 맞춰야 값이 일관된다.
 
 ## 4. 숫자 타입 — 엔티티 유래 필드는 래퍼 타입
 
