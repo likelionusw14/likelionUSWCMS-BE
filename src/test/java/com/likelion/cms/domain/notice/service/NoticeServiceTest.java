@@ -72,11 +72,11 @@ class NoticeServiceTest {
 
         NoticeResponse response = noticeService.create(request, 1L);
 
-        assertThat(response.noticeId()).isEqualTo(30L);
-        assertThat(response.title()).isEqualTo("새 공지");
-        assertThat(response.content()).isEqualTo("공지 내용");
-        assertThat(response.isFixed()).isFalse();
-        assertThat(response.publishedAt()).isNotNull();
+        assertThat(response.getNoticeId()).isEqualTo(30L);
+        assertThat(response.getTitle()).isEqualTo("새 공지");
+        assertThat(response.getContent()).isEqualTo("공지 내용");
+        assertThat(response.getIsFixed()).isFalse();
+        assertThat(response.getPublishedAt()).isNotNull();
         verify(fileAssetRepository, never()).findById(any());
     }
 
@@ -112,7 +112,7 @@ class NoticeServiceTest {
 
         NoticeResponse response = noticeService.update(30L, request, 1L);
 
-        assertThat(response.externalUrl()).isNull();
+        assertThat(response.getExternalUrl()).isNull();
         assertThat(notice.getImageAsset()).isNull();
         verify(fileAssetRepository, never()).findById(any());
     }
@@ -131,9 +131,9 @@ class NoticeServiceTest {
 
         NoticeResponse response = noticeService.update(30L, request, 1L);
 
-        assertThat(response.title()).isEqualTo("수정 공지");
-        assertThat(response.content()).isEqualTo("기존 내용");
-        assertThat(response.isFixed()).isTrue();
+        assertThat(response.getTitle()).isEqualTo("수정 공지");
+        assertThat(response.getContent()).isEqualTo("기존 내용");
+        assertThat(response.getIsFixed()).isTrue();
     }
 
     @Test

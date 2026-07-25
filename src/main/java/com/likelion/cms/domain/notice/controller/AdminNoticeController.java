@@ -40,7 +40,7 @@ public class AdminNoticeController {
     ) {
         Long actorUserId = adminAccessGuard.requireAdmin(principal);
         NoticeResponse response = noticeService.create(request, actorUserId);
-        return ResponseEntity.created(URI.create("/api/notices/" + response.noticeId())).body(response);
+        return ResponseEntity.created(URI.create("/api/notices/" + response.getNoticeId())).body(response);
     }
 
     @PatchMapping("/{noticeId}")
