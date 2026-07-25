@@ -11,6 +11,7 @@ import com.likelion.cms.domain.resource.dto.response.LearningResourceResponse;
 import com.likelion.cms.domain.resource.service.ResourceService;
 import com.likelion.cms.domain.user.entity.SystemRole;
 import com.likelion.cms.global.config.SecurityConfig;
+import com.likelion.cms.global.jwt.JwtTokenProvider;
 import com.likelion.cms.global.security.AdminAccessGuard;
 import com.likelion.cms.global.security.CurrentUserPrincipal;
 import com.likelion.cms.support.file.dto.response.FileAssetResponse;
@@ -55,6 +56,9 @@ class AdminContentControllerTest {
 
     @MockitoBean
     private NoticeService noticeService;
+
+    @MockitoBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     void createResourceReturnsCreatedResponseAndLocation() throws Exception {
@@ -157,7 +161,7 @@ class AdminContentControllerTest {
     @Test
     void updateNoticePreservesExplicitNullForImageRemoval() throws Exception {
         LocalDateTime now = LocalDateTime.of(2026, 7, 20, 10, 0);
-        NoticeResponse response = new NoticeResponse(
+        NoticeResponse response = NoticeResponse.of(
                 30L, "공지", "내용", NoticeTag.OTHER, false, null, 7L, now, 2, now, now
         );
         when(noticeService.update(eq(30L), any(), eq(7L))).thenReturn(response);
