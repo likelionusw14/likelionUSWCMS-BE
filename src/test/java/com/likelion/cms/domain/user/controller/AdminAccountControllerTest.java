@@ -6,6 +6,7 @@ import com.likelion.cms.domain.user.entity.AccountStatus;
 import com.likelion.cms.domain.user.entity.SystemRole;
 import com.likelion.cms.domain.user.service.UserService;
 import com.likelion.cms.global.config.SecurityConfig;
+import com.likelion.cms.global.jwt.JwtTokenProvider;
 import com.likelion.cms.global.response.PageMeta;
 import com.likelion.cms.global.response.PageResponse;
 import com.likelion.cms.global.security.AdminAccessGuard;
@@ -43,6 +44,12 @@ class AdminAccountControllerTest {
 
     @MockitoBean
     private UserService userService;
+
+    // #38(카카오 로그인) 머지 이후 SecurityConfig가 JwtTokenProvider를 의존하게 돼서
+    // @Import(SecurityConfig.class)가 있는 이 테스트도 빈을 못 찾아 컨텍스트 로딩이 깨짐.
+    // 실제 토큰 검증 로직은 안 쓰니 mock으로만 채워둠.
+    @MockitoBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     void approveReturnsUpdatedAccount() throws Exception {

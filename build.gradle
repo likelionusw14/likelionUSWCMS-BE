@@ -31,6 +31,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // NimbusJwtDecoder for verifying Kakao's OIDC id_token against its JWKS (used as a standalone
+    // bean only -- never enable spring.security.oauth2.resourceserver.* / .oauth2ResourceServer(),
+    // or Boot will try to authenticate our own HS256 Bearer tokens against Kakao's JWKS too).
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 
     // QueryDSL
     implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta'
@@ -49,6 +53,10 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 }
 
 tasks.named('test') {

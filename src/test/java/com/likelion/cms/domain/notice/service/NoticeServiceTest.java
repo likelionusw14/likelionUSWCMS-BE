@@ -13,19 +13,27 @@ import com.likelion.cms.global.exception.ErrorCode;
 import com.likelion.cms.support.file.entity.FileAsset;
 import com.likelion.cms.support.file.entity.FilePurpose;
 import com.likelion.cms.support.file.repository.FileAssetRepository;
+import com.likelion.cms.global.response.PageResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -49,6 +57,68 @@ class NoticeServiceTest {
     @BeforeEach
     void setUp() {
         noticeService = new NoticeService(noticeRepository, fileAssetRepository, appUserRepository);
+    }
+
+    @Test
+    void listReturnsPagedNoticesWithoutTagFilter() {
+        AppUser actor = actor(1L);
+        Notice fixedNotice = notice(actor, null);
+        initializeEntity(fixedNotice, 1L, 0);
+        Notice normalNotice = notice(actor, null);
+        initializeEntity(normalNotice, 2L, 0);
+
+        Pageable pageable = PageRequest.of(0, 20);
+        Page<Notice> noticePage = new PageImpl<>(List.of(fixedNotice, normalNotice), pageable, 2);
+
+        when(noticeRepository.findAllActiveByTag(isNull(), eq(pageable))).thenReturn(noticePage);
+
+        PageResponse<NoticeResponse> response = noticeService.list(null, 0, 20);
+
+        assertThat(response.getItems()).hasSize(2);
+        assertThat(response.getItems().get(0).getNoticeId()).isEqualTo(1L);
+        assertThat(response.getPage().getTotalElements()).isEqualTo(2);
+        assertThat(response.getPage().getTotalPages()).isEqualTo(1);
+        assertThat(response.getPage().isHasNext()).isFalse();
+    }
+
+    @Test
+    void listFiltersByTagWhenProvided() {
+        AppUser actor = actor(1L);
+        Notice notice = notice(actor, null);
+        initializeEntity(notice, 3L, 0);
+
+        Pageable pageable = PageRequest.of(0, 20);
+        Page<Notice> noticePage = new PageImpl<>(List.of(notice), pageable, 1);
+
+        when(noticeRepository.findAllActiveByTag(eq(NoticeTag.PROJECT), eq(pageable))).thenReturn(noticePage);
+
+        PageResponse<NoticeResponse> response = noticeService.list(NoticeTag.PROJECT, 0, 20);
+
+        assertThat(response.getItems()).hasSize(1);
+        assertThat(response.getItems().get(0).getTag()).isEqualTo(NoticeTag.PROJECT);
+    }
+
+    @Test
+    void getReturnsNoticeWhenFound() {
+        AppUser actor = actor(1L);
+        Notice notice = notice(actor, null);
+        initializeEntity(notice, 30L, 0);
+
+        when(noticeRepository.findById(30L)).thenReturn(Optional.of(notice));
+
+        NoticeResponse response = noticeService.get(30L);
+
+        assertThat(response.getNoticeId()).isEqualTo(30L);
+        assertThat(response.getTitle()).isEqualTo("기존 공지");
+    }
+
+    @Test
+    void getRejectsMissingNotice() {
+        when(noticeRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> noticeService.get(99L))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.RESOURCE_NOT_FOUND));
     }
 
     @Test
