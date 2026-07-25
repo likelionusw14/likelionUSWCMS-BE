@@ -3,6 +3,7 @@ package com.likelion.cms.domain.auth.service;
 import com.likelion.cms.global.exception.BusinessException;
 import com.likelion.cms.global.exception.ErrorCode;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -17,7 +18,7 @@ import java.security.MessageDigest;
 public class CsrfCookieValidator {
 
     public void validate(String csrfCookieValue, String csrfHeaderValue) {
-        if (csrfCookieValue == null || csrfHeaderValue == null
+        if (!StringUtils.hasText(csrfCookieValue) || !StringUtils.hasText(csrfHeaderValue)
                 || !MessageDigest.isEqual(
                         csrfCookieValue.getBytes(StandardCharsets.UTF_8),
                         csrfHeaderValue.getBytes(StandardCharsets.UTF_8))) {

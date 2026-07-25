@@ -33,9 +33,23 @@ public class RefreshTokenStore {
         return rawToken;
     }
 
-    public Optional<Long> resolve(String rawToken) {
-        String value = redisTemplate.opsForValue().get(key(rawToken));
-        return Optional.ofNullable(value).map(Long::valueOf);
+    /**
+     * Atomically reads and deletes the token in one Redis round trip (GETDEL),
+     * so two concurrent redemptions of the same raw token can't both succeed --
+     * only the first caller gets a userId back, the second sees it already gone.
+     * A malformed stored value (shouldn't happen in practice) is treated as an
+     * invalid token rather than propagating a parse error.
+     */
+    public Optional<Long> consume(String rawToken) {
+        String value = redisTemplate.opsForValue().getAndDelete(key(rawToken));
+        if (value == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Long.valueOf(value));
+        } catch (NumberFormatException e) {
+            return Optional.empty();
+        }
     }
 
     public void revoke(String rawToken) {

@@ -37,4 +37,18 @@ class CsrfCookieValidatorTest {
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED));
     }
+
+    @Test
+    void rejectsWhenBothValuesAreBlank() {
+        assertThatThrownBy(() -> validator.validate("", ""))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED));
+    }
+
+    @Test
+    void rejectsWhenCookieIsBlank() {
+        assertThatThrownBy(() -> validator.validate("   ", "token-1"))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED));
+    }
 }

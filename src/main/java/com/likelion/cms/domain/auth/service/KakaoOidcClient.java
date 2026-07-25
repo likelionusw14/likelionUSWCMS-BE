@@ -5,6 +5,7 @@ import com.likelion.cms.global.exception.BusinessException;
 import com.likelion.cms.global.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -17,8 +18,10 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class KakaoOidcClient {
 
     private static final String AUTHORIZE_URI = "https://kauth.kakao.com/oauth/authorize";
+    private static final int CONNECT_TIMEOUT_MILLIS = 3000;
+    private static final int READ_TIMEOUT_MILLIS = 5000;
 
-    private final RestClient restClient = RestClient.create("https://kauth.kakao.com");
+    private final RestClient restClient;
 
     private final String clientId;
     private final String clientSecret;
@@ -31,6 +34,14 @@ public class KakaoOidcClient {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.redirectUri = redirectUri;
+
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(CONNECT_TIMEOUT_MILLIS);
+        requestFactory.setReadTimeout(READ_TIMEOUT_MILLIS);
+        this.restClient = RestClient.builder()
+                .baseUrl("https://kauth.kakao.com")
+                .requestFactory(requestFactory)
+                .build();
     }
 
     public String buildAuthorizeUrl(String state, String nonce) {
@@ -55,8 +66,9 @@ public class KakaoOidcClient {
             form.add("client_secret", clientSecret);
         }
 
+        KakaoTokenResponse tokenResponse;
         try {
-            return restClient.post()
+            tokenResponse = restClient.post()
                     .uri("/oauth/token")
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .body(form)
@@ -65,5 +77,10 @@ public class KakaoOidcClient {
         } catch (RestClientException e) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "카카오 인증 코드 교환에 실패했습니다.");
         }
+
+        if (tokenResponse == null || !StringUtils.hasText(tokenResponse.idToken())) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "카카오로부터 유효한 토큰을 받지 못했습니다.");
+        }
+        return tokenResponse;
     }
 }

@@ -48,7 +48,7 @@ public class AccountOnboardingService {
                 .build();
 
         try {
-            user = appUserRepository.save(user);
+            user = appUserRepository.saveAndFlush(user);
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(ErrorCode.CONFLICT, "이미 사용 중인 학번입니다.");
         }

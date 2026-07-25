@@ -53,6 +53,7 @@ class OnboardingSessionStoreTest {
 
         assertThat(resolved).contains("kakao-sub-123");
         verify(valueOperations, never()).getAndDelete(anyString());
+        verify(redisTemplate, never()).delete(anyString());
     }
 
     @Test

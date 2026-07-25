@@ -9,7 +9,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.util.HexFormat;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,6 +24,8 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class RefreshTokenStoreTest {
+
+    private static final String KEY_PREFIX = "auth:refresh:";
 
     @Mock
     private StringRedisTemplate redisTemplate;
@@ -37,38 +43,63 @@ class RefreshTokenStoreTest {
     @Test
     void issueStoresHashedTokenKeyedToUserIdWithFourteenDayTtl() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
 
         String rawToken = store.issue(42L);
 
         assertThat(rawToken).isNotBlank();
-        verify(valueOperations).set(anyString(), eq("42"), eq(Duration.ofDays(14)));
+        verify(valueOperations).set(keyCaptor.capture(), eq("42"), eq(Duration.ofDays(14)));
+        assertThat(keyCaptor.getValue()).isEqualTo(expectedKey(rawToken));
     }
 
     @Test
-    void resolveLooksUpByHashOfRawToken() {
+    void consumeAtomicallyReadsAndDeletesByHashOfRawToken() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
-        String rawToken = store.issue(42L);
-        verify(valueOperations).set(keyCaptor.capture(), eq("42"), eq(Duration.ofDays(14)));
-        when(valueOperations.get(keyCaptor.getValue())).thenReturn("42");
+        String rawToken = "some-raw-token";
+        when(valueOperations.getAndDelete(expectedKey(rawToken))).thenReturn("42");
 
-        Optional<Long> resolved = store.resolve(rawToken);
+        Optional<Long> resolved = store.consume(rawToken);
 
         assertThat(resolved).contains(42L);
     }
 
     @Test
-    void resolveReturnsEmptyWhenTokenUnknown() {
+    void consumeReturnsEmptyWhenTokenUnknown() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        when(valueOperations.get(anyString())).thenReturn(null);
+        when(valueOperations.getAndDelete(anyString())).thenReturn(null);
 
-        assertThat(store.resolve("unknown-token")).isEmpty();
+        assertThat(store.consume("unknown-token")).isEmpty();
+    }
+
+    @Test
+    void consumeReturnsEmptyWhenStoredValueIsNotNumeric() {
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        String rawToken = "some-raw-token";
+        when(valueOperations.getAndDelete(expectedKey(rawToken))).thenReturn("not-a-number");
+
+        assertThat(store.consume(rawToken)).isEmpty();
     }
 
     @Test
     void revokeDeletesTheHashedKey() {
-        store.revoke("some-raw-token");
+        String rawToken = "some-raw-token";
 
-        verify(redisTemplate).delete(anyString());
+        store.revoke(rawToken);
+
+        verify(redisTemplate).delete(expectedKey(rawToken));
+    }
+
+    private String expectedKey(String rawToken) {
+        return KEY_PREFIX + sha256Hex(rawToken);
+    }
+
+    private String sha256Hex(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

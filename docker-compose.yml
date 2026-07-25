@@ -11,8 +11,17 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/cms?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
       - JWT_SECRET=${JWT_SECRET}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
+      - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
+      - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
+      - FRONTEND_APP_REDIRECT_URI=${FRONTEND_APP_REDIRECT_URI}
+      - FRONTEND_ONBOARDING_REDIRECT_URI=${FRONTEND_ONBOARDING_REDIRECT_URI}
+      - FRONTEND_ERROR_REDIRECT_URI=${FRONTEND_ERROR_REDIRECT_URI}
     depends_on:
       - mysql-db
+      - redis
     restart: always
 
   mysql-db:
@@ -28,6 +37,11 @@ services:
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: likelion-cms-redis
     restart: always
 
 volumes:

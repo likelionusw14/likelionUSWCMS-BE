@@ -97,7 +97,7 @@ class AccountOnboardingServiceTest {
         when(onboardingSessionStore.resolve("session-1")).thenReturn(Optional.of("kakao-sub-123"));
         when(appUserRepository.existsByStudentId("202012345")).thenReturn(false);
         when(cohortRepository.findById(1L)).thenReturn(Optional.of(testCohort()));
-        when(appUserRepository.save(any())).thenThrow(new DataIntegrityViolationException("duplicate"));
+        when(appUserRepository.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("duplicate"));
 
         assertThatThrownBy(() -> service.createAccount("session-1", request))
                 .isInstanceOfSatisfying(BusinessException.class,
@@ -110,7 +110,7 @@ class AccountOnboardingServiceTest {
         when(onboardingSessionStore.resolve("session-1")).thenReturn(Optional.of("kakao-sub-123"));
         when(appUserRepository.existsByStudentId("202012345")).thenReturn(false);
         when(cohortRepository.findById(1L)).thenReturn(Optional.of(testCohort()));
-        when(appUserRepository.save(any())).thenAnswer(invocation -> {
+        when(appUserRepository.saveAndFlush(any())).thenAnswer(invocation -> {
             // Real JPA sets @Version/createdAt/updatedAt on INSERT; simulate that here
             // since the repository is mocked and never actually persists anything.
             AppUser user = invocation.getArgument(0);
@@ -126,6 +126,7 @@ class AccountOnboardingServiceTest {
         assertThat(response.getStudentId()).isEqualTo("202012345");
         assertThat(response.getRole()).isEqualTo(SystemRole.MEMBER);
         assertThat(response.getStatus()).isEqualTo(AccountStatus.PENDING);
+        verify(appUserRepository).saveAndFlush(any());
         verify(onboardingSessionStore).consume("session-1");
     }
 

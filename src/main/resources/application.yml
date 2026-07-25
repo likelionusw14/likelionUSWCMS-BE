@@ -29,12 +29,11 @@ kakao:
   client-secret: ${KAKAO_CLIENT_SECRET:}
   redirect-uri: ${KAKAO_REDIRECT_URI}
 
-# TODO: replace these placeholder defaults once the frontend team confirms real routes.
 app:
   frontend:
-    app-redirect-uri: ${FRONTEND_APP_REDIRECT_URI:https://placeholder.example.com/app}
-    onboarding-redirect-uri: ${FRONTEND_ONBOARDING_REDIRECT_URI:https://placeholder.example.com/onboarding}
-    error-redirect-uri: ${FRONTEND_ERROR_REDIRECT_URI:https://placeholder.example.com/error}
+    app-redirect-uri: ${FRONTEND_APP_REDIRECT_URI}
+    onboarding-redirect-uri: ${FRONTEND_ONBOARDING_REDIRECT_URI}
+    error-redirect-uri: ${FRONTEND_ERROR_REDIRECT_URI}
 
 jwt:
   secret: ${JWT_SECRET}
