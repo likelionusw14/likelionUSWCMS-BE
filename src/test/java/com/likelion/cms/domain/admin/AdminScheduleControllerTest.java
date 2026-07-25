@@ -1,7 +1,7 @@
 package com.likelion.cms.domain.admin;
 
 import com.likelion.cms.domain.schedule.controller.AdminScheduleController;
-import com.likelion.cms.domain.schedule.dto.response.CohortSummaryResponse;
+import com.likelion.cms.domain.cohort.dto.response.CohortSummary;
 import com.likelion.cms.domain.schedule.dto.response.ScheduleResponse;
 import com.likelion.cms.domain.schedule.service.ScheduleService;
 import com.likelion.cms.domain.user.entity.SystemRole;
@@ -58,7 +58,7 @@ class AdminScheduleControllerTest {
         LocalDateTime now = LocalDateTime.of(2026, 7, 20, 10, 0);
         ScheduleResponse response = ScheduleResponse.of(
                 20L, "정기 세션", "설명",
-                CohortSummaryResponse.of(1L, 14, "14기"),
+                CohortSummary.of(1L, 14, "14기"),
                 LocalDate.of(2026, 8, 1), false, LocalTime.of(19, 0), "미래 101호",
                 0, now, now
         );
@@ -162,7 +162,7 @@ class AdminScheduleControllerTest {
         LocalDateTime now = LocalDateTime.of(2026, 7, 20, 10, 0);
         ScheduleResponse response = ScheduleResponse.of(
                 10L, "변경된 제목", "기존 설명",
-                CohortSummaryResponse.of(1L, 14, "14기"),
+                CohortSummary.of(1L, 14, "14기"),
                 LocalDate.of(2026, 8, 1), false, LocalTime.of(19, 0), "기존 장소",
                 2, now, now
         );
@@ -202,7 +202,7 @@ class AdminScheduleControllerTest {
         LocalDateTime now = LocalDateTime.of(2026, 7, 20, 10, 0);
         ScheduleResponse response = ScheduleResponse.of(
                 10L, "기존 제목", "기존 설명",
-                CohortSummaryResponse.of(1L, 14, "14기"),
+                CohortSummary.of(1L, 14, "14기"),
                 LocalDate.of(2026, 8, 1), true, null, "기존 장소",
                 2, now, now
         );
