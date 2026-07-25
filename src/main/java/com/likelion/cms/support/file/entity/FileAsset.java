@@ -30,7 +30,12 @@ public class FileAsset extends BaseTimeEntity {
     @Column(nullable = false)
     private FilePurpose purpose;
 
-    @Column(nullable = false, unique = true, length = 1024)
+    /**
+     * objectKey : S3 오브젝트 키.
+     * <p>unique 인덱스를 걸기 위해 768자로 제한한다. utf8mb4 는 문자당 4바이트라
+     * InnoDB 인덱스 상한(3072바이트) 안에 들어가는 최대 길이가 768자다.</p>
+     */
+    @Column(nullable = false, unique = true, length = 768)
     private String objectKey;
 
     @Column(nullable = false)
