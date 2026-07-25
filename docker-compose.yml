@@ -11,8 +11,11 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/cms?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
       - JWT_SECRET=${JWT_SECRET}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
     depends_on:
       - mysql-db
+      - redis
     restart: always
 
   mysql-db:
@@ -28,6 +31,13 @@ services:
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: likelion-cms-redis
+    ports:
+      - "127.0.0.1:6379:6379"
     restart: always
 
 volumes:

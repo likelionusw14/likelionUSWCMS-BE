@@ -38,7 +38,7 @@ import com.likelion.cms.domain.attendance.entity.Attendance;
 import com.likelion.cms.domain.attendance.entity.AttendanceStatus;
 import com.likelion.cms.domain.attendance.entity.CheckInSource;
 import com.likelion.cms.domain.attendance.repository.AttendanceRepository;
-import com.likelion.cms.domain.cohort.entity.Cohort; // 실제 패키지 경로 확인 필요
+import com.likelion.cms.domain.cohort.entity.Cohort;
 import com.likelion.cms.domain.schedule.entity.Schedule;
 import com.likelion.cms.domain.schedule.repository.ScheduleRepository;
 import com.likelion.cms.domain.user.entity.AccountStatus;
@@ -93,7 +93,6 @@ class AdminAttendanceServiceTest {
                 .build();
         ReflectionTestUtils.setField(admin, "userId", 99L);
 
-        // Schedule은 필드가 많아 mock으로 대체, 응답 매핑에 필요한 메서드만 스텁
         schedule = mock(Schedule.class);
         ReflectionTestUtils.setField(schedule, "scheduleId", 10L);
 
@@ -145,7 +144,7 @@ class AdminAttendanceServiceTest {
     void updateAttendance_versionMismatch_throwsException() {
         UpdateAttendanceRequest request = new UpdateAttendanceRequest();
         request.setStatus(AdminSettableAttendanceStatus.PRESENT);
-        request.setVersion(999); // 실제 attendance.version(0)과 불일치
+        request.setVersion(999);
 
         when(attendanceRepository.findById(100L)).thenReturn(Optional.of(attendance));
 
@@ -176,7 +175,6 @@ class AdminAttendanceServiceTest {
         UpdateAttendanceRequest request = new UpdateAttendanceRequest();
         request.setStatus(AdminSettableAttendanceStatus.PRESENT);
         request.setVersion(0);
-        // memo를 아예 안 건드림 -> memoProvided = false
 
         when(attendanceRepository.findById(100L)).thenReturn(Optional.of(attendance));
         when(appUserRepository.getReferenceById(99L)).thenReturn(admin);
@@ -197,7 +195,7 @@ class AdminAttendanceServiceTest {
 
         UpdateAttendanceRequest request = new UpdateAttendanceRequest();
         request.setStatus(AdminSettableAttendanceStatus.ABSENT);
-        request.setMemo(null); // 명시적 null -> memoProvided = true
+        request.setMemo(null);
         request.setVersion(0);
 
         when(attendanceRepository.findById(100L)).thenReturn(Optional.of(attendance));
@@ -277,7 +275,6 @@ class AdminAttendanceServiceTest {
         when(appUserRepository.findAllByCohort_CohortIdAndSystemRoleAndAccountStatus(
                 5L, SystemRole.MEMBER, AccountStatus.ACTIVE))
                 .thenReturn(List.of(alreadyChecked, notYetChecked));
-        // userId=2는 이미 Attendance가 있음
         when(attendanceRepository.findUserIdsByScheduleId(10L)).thenReturn(List.of(2L));
         when(attendanceCodeService.issue(10L))
                 .thenReturn(new AttendanceCodeCacheValue("123456", LocalDateTime.of(2026, 7, 25, 10, 0)));
@@ -289,7 +286,7 @@ class AdminAttendanceServiceTest {
         List<Attendance> saved = captor.getValue();
 
         assertThat(saved).hasSize(1);
-        assertThat(saved.get(0).getUser()).isEqualTo(notYetChecked); // userId=3만 생성됨
+        assertThat(saved.get(0).getUser()).isEqualTo(notYetChecked);
         assertThat(saved.get(0).getStatus()).isEqualTo(AttendanceStatus.NOT_CHECKED);
         assertThat(response.getCode()).isEqualTo("123456");
         assertThat(response.getExpiresAt()).isEqualTo(LocalDateTime.of(2026, 7, 25, 10, 5));
@@ -307,7 +304,7 @@ class AdminAttendanceServiceTest {
         when(appUserRepository.findAllByCohort_CohortIdAndSystemRoleAndAccountStatus(
                 5L, SystemRole.MEMBER, AccountStatus.ACTIVE))
                 .thenReturn(List.of(member));
-        when(attendanceRepository.findUserIdsByScheduleId(10L)).thenReturn(List.of(1L)); // member의 userId
+        when(attendanceRepository.findUserIdsByScheduleId(10L)).thenReturn(List.of(1L));
         when(attendanceCodeService.issue(10L))
                 .thenReturn(new AttendanceCodeCacheValue("654321", LocalDateTime.now()));
 
