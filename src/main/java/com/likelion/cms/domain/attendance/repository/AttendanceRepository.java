@@ -10,9 +10,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.likelion.cms.common.type.PartType;
 import com.likelion.cms.domain.attendance.entity.Attendance;
 import com.likelion.cms.domain.attendance.entity.AttendanceStatus;
-import com.likelion.cms.common.type.PartType;
 
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
@@ -36,4 +36,12 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     List<Long> findUserIdsByScheduleId(@Param("scheduleId") Long scheduleId);
 
     Optional<Attendance> findByUser_UserIdAndSchedule_ScheduleId(Long userId, Long scheduleId);
+
+    @Query("""
+            SELECT a FROM Attendance a
+            JOIN FETCH a.schedule s
+            WHERE a.user.userId = :userId
+            ORDER BY s.scheduleDate DESC, a.attendanceId DESC
+            """)
+    Page<Attendance> findAllByUserId(@Param("userId") Long userId, Pageable pageable);
 }
