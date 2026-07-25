@@ -29,14 +29,14 @@ public class AttendanceResponse {
     private final LocalDateTime checkedAt;
     private final CheckInSource checkInSource;
     private final String memo;
-    private final int version;
+    private final Integer version;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
 
     public static AttendanceResponse of(Long attendanceId, Long userId, String userName, PartType part,
                                         Long scheduleId, String scheduleTitle, LocalDate scheduleDate,
                                         AttendanceStatus status, LocalDateTime checkedAt,
-                                        CheckInSource checkInSource, String memo, int version,
+                                        CheckInSource checkInSource, String memo, Integer version,
                                         LocalDateTime createdAt, LocalDateTime updatedAt) {
         return new AttendanceResponse(attendanceId, userId, userName, part, scheduleId, scheduleTitle,
                 scheduleDate, status, checkedAt, checkInSource, memo, version, createdAt, updatedAt);
