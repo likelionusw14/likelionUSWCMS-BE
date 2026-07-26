@@ -1,7 +1,7 @@
 package com.likelion.cms.domain.user.service;
 
 import com.likelion.cms.common.type.PartType;
-import com.likelion.cms.domain.user.dto.response.LionResponseDto;
+import com.likelion.cms.domain.user.dto.response.LionResponse;
 import com.likelion.cms.domain.user.entity.AccountStatus;
 import com.likelion.cms.domain.user.entity.AppUser;
 import com.likelion.cms.domain.user.entity.SystemRole;
@@ -23,13 +23,13 @@ public class LionService {
 
     private final AppUserRepository appUserRepository;
 
-    public PageResponse<LionResponseDto> getLions(Long cohortId, PartType part, SystemRole role, Pageable pageable) {
+    public PageResponse<LionResponse> getLions(Long cohortId, PartType part, SystemRole role, Pageable pageable) {
         Page<AppUser> lionPage = appUserRepository.findLions(
                 AccountStatus.ACTIVE, cohortId, part, role, pageable
         );
 
-        List<LionResponseDto> items = lionPage.getContent().stream()
-                .map(LionResponseDto::from)
+        List<LionResponse> items = lionPage.getContent().stream()
+                .map(LionResponse::from)
                 .toList();
 
         PageMeta pageMeta = PageMeta.of(
@@ -39,7 +39,6 @@ public class LionService {
                 lionPage.getTotalPages(),
                 lionPage.hasNext()
         );
-
         return PageResponse.of(items, pageMeta);
     }
 }
