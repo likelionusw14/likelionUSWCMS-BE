@@ -17,6 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.YearMonth;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +29,25 @@ public class ScheduleService {
     private final ScheduleRepository scheduleRepository;
     private final CohortRepository cohortRepository;
     private final AppUserRepository appUserRepository;
+
+    public List<ScheduleResponse> getSchedules(YearMonth yearMonth, Long cohortId) {
+        LocalDate start = yearMonth.atDay(1);
+        LocalDate end = yearMonth.atEndOfMonth();
+
+        List<Schedule> schedules = (cohortId != null)
+                ? scheduleRepository.findByScheduleDateBetweenAndCohort_CohortIdOrderByIsAllDayDescStartTimeAscTitleAsc(start, end, cohortId)
+                : scheduleRepository.findByScheduleDateBetweenOrderByIsAllDayDescStartTimeAscTitleAsc(start, end);
+
+        return schedules.stream()
+                .map(ScheduleResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    public ScheduleResponse getSchedule(Long scheduleId) {
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        return ScheduleResponse.from(schedule);
+    }
 
     @Transactional
     public ScheduleResponse create(CreateScheduleRequest request, Long actorUserId) {

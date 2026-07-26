@@ -30,6 +30,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import java.time.YearMonth;
+import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
 class ScheduleServiceTest {
@@ -336,6 +338,75 @@ class ScheduleServiceTest {
         when(scheduleRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> scheduleService.delete(999L, 100L))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);
+    }
+    @Test
+    @DisplayName("yearMonth로 조회하면 해당 월의 일정만 반환된다")
+    void getSchedules_byYearMonth_success() {
+        Schedule schedule = existingSchedule(false, LocalTime.of(19, 0));
+        YearMonth yearMonth = YearMonth.of(2026, 8);
+
+        when(scheduleRepository.findByScheduleDateBetweenOrderByIsAllDayDescStartTimeAscTitleAsc(
+                yearMonth.atDay(1), yearMonth.atEndOfMonth()))
+                .thenReturn(List.of(schedule));
+
+        List<ScheduleResponse> responses = scheduleService.getSchedules(yearMonth, null);
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).getTitle()).isEqualTo("기존 제목");
+    }
+
+    @Test
+    @DisplayName("cohortId를 함께 전달하면 해당 기수의 일정만 반환된다")
+    void getSchedules_byYearMonthAndCohortId_success() {
+        Schedule schedule = existingSchedule(false, LocalTime.of(19, 0));
+        YearMonth yearMonth = YearMonth.of(2026, 8);
+
+        when(scheduleRepository.findByScheduleDateBetweenAndCohort_CohortIdOrderByIsAllDayDescStartTimeAscTitleAsc(
+                yearMonth.atDay(1), yearMonth.atEndOfMonth(), 1L))
+                .thenReturn(List.of(schedule));
+
+        List<ScheduleResponse> responses = scheduleService.getSchedules(yearMonth, 1L);
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).getCohort().getCohortId()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("해당 월에 일정이 없으면 빈 리스트를 반환한다")
+    void getSchedules_empty_returnsEmptyList() {
+        YearMonth yearMonth = YearMonth.of(2026, 8);
+
+        when(scheduleRepository.findByScheduleDateBetweenOrderByIsAllDayDescStartTimeAscTitleAsc(
+                yearMonth.atDay(1), yearMonth.atEndOfMonth()))
+                .thenReturn(List.of());
+
+        List<ScheduleResponse> responses = scheduleService.getSchedules(yearMonth, null);
+
+        assertThat(responses).isEmpty();
+    }
+
+    @Test
+    @DisplayName("존재하는 scheduleId로 조회하면 상세 정보를 반환한다")
+    void getSchedule_success() {
+        Schedule schedule = existingSchedule(false, LocalTime.of(19, 0));
+
+        when(scheduleRepository.findById(10L)).thenReturn(Optional.of(schedule));
+
+        ScheduleResponse response = scheduleService.getSchedule(10L);
+
+        assertThat(response.getScheduleId()).isEqualTo(10L);
+        assertThat(response.getTitle()).isEqualTo("기존 제목");
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 scheduleId로 조회하면 RESOURCE_NOT_FOUND 예외가 발생한다")
+    void getSchedule_notFound_fails() {
+        when(scheduleRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> scheduleService.getSchedule(999L))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);
