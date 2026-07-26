@@ -1,11 +1,22 @@
 package com.likelion.cms.domain.user.repository;
 
-import com.likelion.cms.domain.user.entity.AppUser;
-import org.springframework.data.jpa.repository.JpaRepository;
-
+import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.likelion.cms.domain.user.entity.AccountStatus;
+import com.likelion.cms.domain.user.entity.AppUser;
+import com.likelion.cms.domain.user.entity.SystemRole;
+
 public interface AppUserRepository extends JpaRepository<AppUser, Long> {
+
+    List<AppUser> findAllByCohort_CohortIdAndSystemRoleAndAccountStatus(
+            Long cohortId,
+            SystemRole systemRole,
+            AccountStatus accountStatus
+    );
+
     Optional<AppUser> findByKakaoSubject(String kakaoSubject);
 
     boolean existsByStudentId(String studentId);
