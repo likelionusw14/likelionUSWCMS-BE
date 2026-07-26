@@ -15,11 +15,13 @@ import com.likelion.cms.support.file.store.FileIdempotencyStore;
 import com.likelion.cms.support.file.store.FileUploadGrant;
 import com.likelion.cms.support.file.store.FileUploadGrantStore;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Objects;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class FileAssetService {
@@ -100,11 +102,22 @@ public class FileAssetService {
                     request.objectKey(),
                     response.getFileAssetId()
             );
-            uploadGrantStore.delete(request.objectKey());
+            // 등록·완료 이후의 grant 정리는 부수 작업이다. 여기서 실패해도 이미 성공한
+            // 요청을 에러로 되돌리거나 clearPending으로 되돌리면 안 되므로 best-effort로 처리한다.
+            // (남은 grant는 TTL로 만료된다.)
+            deleteGrantQuietly(request.objectKey());
             return response;
         } catch (RuntimeException exception) {
             idempotencyStore.clearPending(actorUserId, idempotencyKey, request.objectKey());
             throw exception;
+        }
+    }
+
+    private void deleteGrantQuietly(String objectKey) {
+        try {
+            uploadGrantStore.delete(objectKey);
+        } catch (RuntimeException cleanupFailure) {
+            log.warn("업로드 grant 정리 실패 (objectKey={}). TTL로 만료 예정.", objectKey, cleanupFailure);
         }
     }
 

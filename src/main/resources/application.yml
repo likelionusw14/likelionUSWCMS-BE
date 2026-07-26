@@ -41,7 +41,7 @@ jwt:
 
 storage:
   s3:
-    bucket-name: ${S3_BUCKET_NAME:}
+    bucket-name: ${S3_BUCKET_NAME}
     region: ${AWS_REGION:ap-northeast-2}
     upload-url-ttl: 10m
 

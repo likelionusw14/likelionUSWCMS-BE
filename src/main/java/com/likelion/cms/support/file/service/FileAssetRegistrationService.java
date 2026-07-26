@@ -9,6 +9,7 @@ import com.likelion.cms.support.file.entity.FileAsset;
 import com.likelion.cms.support.file.repository.FileAssetRepository;
 import com.likelion.cms.support.file.store.FileUploadGrant;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +26,7 @@ public class FileAssetRegistrationService {
     public FileAssetResponse register(FileUploadGrant grant) {
         return fileAssetRepository.findByObjectKey(grant.objectKey())
                 .map(existing -> existingResponse(existing, grant))
-                .orElseGet(() -> create(grant));
+                .orElseGet(() -> createOrResolve(grant));
     }
 
     @Transactional(readOnly = true)
@@ -39,7 +40,7 @@ public class FileAssetRegistrationService {
         return FileAssetResponse.from(fileAsset);
     }
 
-    private FileAssetResponse create(FileUploadGrant grant) {
+    private FileAssetResponse createOrResolve(FileUploadGrant grant) {
         AppUser actor = appUserRepository.findById(grant.actorUserId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
         FileAsset fileAsset = FileAsset.builder()
@@ -51,7 +52,14 @@ public class FileAssetRegistrationService {
                 .checksumSha256(grant.checksumSha256())
                 .uploadedByUser(actor)
                 .build();
-        return FileAssetResponse.from(fileAssetRepository.saveAndFlush(fileAsset));
+        try {
+            return FileAssetResponse.from(fileAssetRepository.saveAndFlush(fileAsset));
+        } catch (DataIntegrityViolationException concurrentInsert) {
+            // objectKey unique 제약 위반 = 다른 요청이 먼저 등록함. 그 결과를 다시 조회해 반환한다.
+            return fileAssetRepository.findByObjectKey(grant.objectKey())
+                    .map(existing -> existingResponse(existing, grant))
+                    .orElseThrow(() -> concurrentInsert);
+        }
     }
 
     private FileAssetResponse existingResponse(FileAsset existing, FileUploadGrant grant) {

@@ -56,6 +56,8 @@ public class FileAssetController {
             @ApiResponse(responseCode = "403", description = "관리자 권한 필요"),
             @ApiResponse(responseCode = "404", description = "발급 기록 또는 S3 객체 없음"),
             @ApiResponse(responseCode = "409", description = "멱등 키 또는 파일 자산 충돌"),
+            @ApiResponse(responseCode = "413", description = "파일 크기 제한 초과"),
+            @ApiResponse(responseCode = "415", description = "지원하지 않는 파일 형식"),
             @ApiResponse(responseCode = "422", description = "업로드 메타데이터 불일치"),
             @ApiResponse(responseCode = "502", description = "S3 연동 실패")
     })
