@@ -64,4 +64,18 @@ public class Attendance extends BaseTimeEntity {
         this.schedule = schedule;
         this.status = status != null ? status : AttendanceStatus.NOT_CHECKED;
     }
+
+    public void updateByAdmin(AttendanceStatus status,
+                              String memo,
+                              boolean memoProvided,
+                              AppUser admin,
+                              LocalDateTime updatedAt) {
+        this.status = status;
+        if (memoProvided) {
+            this.memo = memo;
+        }
+        this.checkInSource = CheckInSource.ADMIN;
+        this.checkedAt = updatedAt;
+        this.updatedByUser = admin;
+    }
 }
