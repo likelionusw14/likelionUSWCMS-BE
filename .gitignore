@@ -39,4 +39,7 @@ out/
 ### Mac ###
 .DS_Store
 
+### Env ###
+.env
+
 !gradle/wrapper/gradle-wrapper.jar

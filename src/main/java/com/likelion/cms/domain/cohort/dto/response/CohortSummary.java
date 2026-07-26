@@ -1,6 +1,7 @@
 package com.likelion.cms.domain.cohort.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.likelion.cms.domain.cohort.entity.Cohort;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,5 +17,9 @@ public class CohortSummary {
 
     public static CohortSummary of(Long cohortId, Integer number, String name) {
         return new CohortSummary(cohortId, number, name);
+    }
+
+    public static CohortSummary from(Cohort cohort) {
+        return new CohortSummary(cohort.getCohortId(), cohort.getNumber(), cohort.getName());
     }
 }
