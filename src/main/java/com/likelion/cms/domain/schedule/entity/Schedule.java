@@ -13,6 +13,7 @@ import org.hibernate.annotations.SQLRestriction;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import org.springframework.cglib.core.Local;
 
 @Entity
 @Table(name = "Schedule", indexes = {
@@ -73,5 +74,19 @@ public class Schedule extends BaseTimeEntity {
         this.startTime = startTime;
         this.location = location;
         this.createdByUser = createdByUser;
+    }
+
+    public void softDelete(){
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    public void update(String title, String description, LocalDate scheduleDate
+            , Boolean isAllDay, LocalTime startTime, String location) {
+        this.title = title;
+        this.description = description;
+        this.scheduleDate = scheduleDate;
+        this.isAllDay = isAllDay;
+        this.startTime = startTime;
+        this.location = location;
     }
 }
