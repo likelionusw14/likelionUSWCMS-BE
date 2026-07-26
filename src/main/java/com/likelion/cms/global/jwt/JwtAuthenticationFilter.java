@@ -1,5 +1,7 @@
 package com.likelion.cms.global.jwt;
 
+import com.likelion.cms.domain.user.entity.SystemRole;
+import com.likelion.cms.global.security.CurrentUserPrincipal;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,9 +30,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (jwtTokenProvider.validateToken(token)) {
                 Long userId = jwtTokenProvider.getUserIdFromToken(token);
+                SystemRole role = jwtTokenProvider.getRoleFromToken(token);
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(userId, null, Collections.emptyList());
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        new CurrentUserPrincipal(userId, role), null, Collections.emptyList());
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }

@@ -4,19 +4,26 @@ import com.likelion.cms.domain.notice.dto.request.CreateNoticeRequest;
 import com.likelion.cms.domain.notice.dto.request.UpdateNoticeRequest;
 import com.likelion.cms.domain.notice.dto.response.NoticeResponse;
 import com.likelion.cms.domain.notice.entity.Notice;
+import com.likelion.cms.domain.notice.entity.NoticeTag;
 import com.likelion.cms.domain.notice.repository.NoticeRepository;
 import com.likelion.cms.domain.user.entity.AppUser;
 import com.likelion.cms.domain.user.repository.AppUserRepository;
 import com.likelion.cms.global.exception.BusinessException;
 import com.likelion.cms.global.exception.ErrorCode;
+import com.likelion.cms.global.response.PageMeta;
+import com.likelion.cms.global.response.PageResponse;
 import com.likelion.cms.support.file.entity.FileAsset;
 import com.likelion.cms.support.file.entity.FilePurpose;
 import com.likelion.cms.support.file.repository.FileAssetRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +33,33 @@ public class NoticeService {
     private final NoticeRepository noticeRepository;
     private final FileAssetRepository fileAssetRepository;
     private final AppUserRepository appUserRepository;
+
+    public PageResponse<NoticeResponse> list(NoticeTag tag, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Notice> noticePage = noticeRepository.findAllActiveByTag(tag, pageable);
+
+        List<NoticeResponse> items = noticePage.getContent().stream()
+                .map(NoticeResponse::from)
+                .toList();
+
+        PageMeta pageMeta = PageMeta.of(
+                noticePage.getNumber(),
+                noticePage.getSize(),
+                noticePage.getTotalElements(),
+                noticePage.getTotalPages(),
+                noticePage.hasNext()
+        );
+
+        return PageResponse.of(items, pageMeta);
+    }
+
+    public NoticeResponse get(Long noticeId) {
+        Notice notice = noticeRepository.findById(noticeId)
+                .filter(found -> found.getArchivedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        return NoticeResponse.from(notice);
+    }
 
     @Transactional
     public NoticeResponse create(CreateNoticeRequest request, Long actorUserId) {
