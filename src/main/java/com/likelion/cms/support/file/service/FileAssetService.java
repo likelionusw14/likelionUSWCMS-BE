@@ -158,4 +158,9 @@ public class FileAssetService {
             throw new BusinessException(ErrorCode.FILE_METADATA_MISMATCH);
         }
     }
+
+    public FileStorage.PresignedDownload createDownloadUrl(String objectKey) {
+        return fileStorage.createDownloadUrl(objectKey);
+    }
+
 }

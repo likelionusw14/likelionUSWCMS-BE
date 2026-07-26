@@ -18,6 +18,10 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
+
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
@@ -59,6 +63,31 @@ public class S3FileStorage implements FileStorage {
             );
         } catch (SdkException exception) {
             log.error("Failed to create an S3 presigned upload URL", exception);
+            throw new BusinessException(ErrorCode.FILE_STORAGE_ERROR);
+        }
+    }
+
+    @Override
+    public PresignedDownload createDownloadUrl(String objectKey) {
+        assertConfigured();
+        try {
+            GetObjectRequest getObject = GetObjectRequest.builder()
+                    .bucket(properties.bucketName())
+                    .key(objectKey)
+                    .build();
+
+            GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                    .signatureDuration(properties.uploadUrlTtl())
+                    .getObjectRequest(getObject)
+                    .build();
+            PresignedGetObjectRequest presigned = s3Presigner.presignGetObject(presignRequest);
+
+            return new PresignedDownload(
+                    presigned.url().toString(),
+                    OffsetDateTime.ofInstant(presigned.expiration(), ZoneOffset.UTC)
+            );
+        } catch (SdkException exception) {
+            log.error("Failed to create an S3 presigned download URL", exception);
             throw new BusinessException(ErrorCode.FILE_STORAGE_ERROR);
         }
     }
