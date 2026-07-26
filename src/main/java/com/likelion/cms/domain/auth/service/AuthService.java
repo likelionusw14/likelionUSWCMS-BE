@@ -102,7 +102,6 @@ public class AuthService {
         return new CallbackResult(URI.create(onboardingRedirectUri), cookies);
     }
 
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public ReissueResult reissueAccessToken(String rawRefreshToken) {
         if (!StringUtils.hasText(rawRefreshToken)) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
