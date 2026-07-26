@@ -78,4 +78,10 @@ public class Attendance extends BaseTimeEntity {
         this.checkedAt = updatedAt;
         this.updatedByUser = admin;
     }
+
+    public void checkIn(LocalDateTime checkedAt, CheckInSource source) {
+        this.status = AttendanceStatus.PRESENT;
+        this.checkedAt = checkedAt;
+        this.checkInSource = source;
+    }
 }
