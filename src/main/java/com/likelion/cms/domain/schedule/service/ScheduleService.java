@@ -92,6 +92,9 @@ public class ScheduleService {
 
         schedule.update(finalTitle, finalDescription, finalScheduleDate, finalIsAllDay, finalStartTime, finalLocation);
 
+        // @Version은 실제 UPDATE(flush) 시점에 증가한다. flush 없이 응답을 만들면
+        // 갱신 전 version이 내려가 클라이언트의 다음 수정이 낙관적 락 충돌을 낸다.
+        scheduleRepository.flush();
         return ScheduleResponse.from(schedule);
     }
 
