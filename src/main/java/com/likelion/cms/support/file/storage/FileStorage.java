@@ -8,11 +8,19 @@ public interface FileStorage {
 
     PresignedUpload createUploadUrl(String objectKey, String mimeType, String checksumSha256Base64);
 
+    PresignedDownload createDownloadUrl(String objectKey);
+
     Optional<StoredFileMetadata> findMetadata(String objectKey);
 
     record PresignedUpload(
             String uploadUrl,
             Map<String, String> requiredHeaders,
+            OffsetDateTime expiresAt
+    ) {
+    }
+
+    record PresignedDownload(
+            String downloadUrl,
             OffsetDateTime expiresAt
     ) {
     }
