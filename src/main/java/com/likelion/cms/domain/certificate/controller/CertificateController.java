@@ -3,6 +3,7 @@ package com.likelion.cms.domain.certificate.controller;
 import com.likelion.cms.domain.certificate.dto.response.CertificatePreviewResponse;
 import com.likelion.cms.domain.certificate.dto.response.DownloadUrlResponse;
 import com.likelion.cms.domain.certificate.service.CertificateService;
+import com.likelion.cms.global.security.AccountStatusGuard;
 import com.likelion.cms.global.security.CurrentUserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,12 +18,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class CertificateController {
 
     private final CertificateService certificateService;
+    private final AccountStatusGuard accountStatusGuard;
 
     @GetMapping("/preview")
     public CertificatePreviewResponse previewMyCertificateData(
             @AuthenticationPrincipal CurrentUserPrincipal principal
     ) {
-        return certificateService.previewMyCertificateData(principal.userId());
+        Long userId = accountStatusGuard.requireActive(principal);
+        return certificateService.previewMyCertificateData(userId);
     }
 
     @GetMapping("/{certificateId}/download-url")
@@ -30,6 +33,7 @@ public class CertificateController {
             @PathVariable Long certificateId,
             @AuthenticationPrincipal CurrentUserPrincipal principal
     ) {
-        return certificateService.getDownloadUrl(certificateId, principal.userId());
+        Long userId = accountStatusGuard.requireActive(principal);
+        return certificateService.getDownloadUrl(certificateId, userId);
     }
 }
