@@ -22,6 +22,8 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
+import software.amazon.awssdk.core.sync.RequestBody;
+
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
@@ -67,6 +69,24 @@ public class S3FileStorage implements FileStorage {
         }
     }
 
+    @Override
+    public void uploadDirectly(String objectKey, byte[] content, String mimeType) {
+        assertConfigured();
+        try {
+            s3Client.putObject(
+                    PutObjectRequest.builder()
+                            .bucket(properties.bucketName())
+                            .key(objectKey)
+                            .contentType(mimeType)
+                            .build(),
+                    RequestBody.fromBytes(content)
+            );
+        } catch (SdkException exception) {
+            log.error("Failed to upload file directly to S3", exception);
+            throw new BusinessException(ErrorCode.FILE_STORAGE_ERROR);
+        }
+    }
+    
     @Override
     public PresignedDownload createDownloadUrl(String objectKey) {
         assertConfigured();

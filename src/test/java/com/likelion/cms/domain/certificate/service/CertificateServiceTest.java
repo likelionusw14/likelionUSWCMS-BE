@@ -2,11 +2,17 @@ package com.likelion.cms.domain.certificate.service;
 
 import com.likelion.cms.common.type.PartType;
 import com.likelion.cms.domain.certificate.dto.response.CertificatePreviewResponse;
+import com.likelion.cms.domain.certificate.dto.response.CertificateResponse;
 import com.likelion.cms.domain.certificate.dto.response.DownloadUrlResponse;
 import com.likelion.cms.domain.certificate.entity.ActivityCertificate;
+import com.likelion.cms.domain.certificate.entity.CertificateIssueStatus;
 import com.likelion.cms.domain.certificate.repository.ActivityCertificateRepository;
+import com.likelion.cms.domain.certificate.store.CertificateIdempotencyRecord;
+import com.likelion.cms.domain.certificate.store.CertificateIdempotencyStore;
 import com.likelion.cms.domain.cohort.entity.Cohort;
+import com.likelion.cms.domain.cohort.repository.CohortRepository;
 import com.likelion.cms.domain.user.entity.AppUser;
+import com.likelion.cms.domain.user.entity.SystemRole;
 import com.likelion.cms.domain.user.repository.AppUserRepository;
 import com.likelion.cms.global.exception.BusinessException;
 import com.likelion.cms.global.exception.ErrorCode;
@@ -23,9 +29,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.OffsetDateTime;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,6 +48,15 @@ class CertificateServiceTest {
 
     @Mock
     private FileAssetService fileAssetService;
+
+    @Mock
+    private CohortRepository cohortRepository;
+
+    @Mock
+    private PdfGenerationService pdfGenerationService;
+
+    @Mock
+    private CertificateIdempotencyStore idempotencyStore;
 
     @InjectMocks
     private CertificateService certificateService;
@@ -60,6 +78,7 @@ class CertificateServiceTest {
         lenient().when(user.getStudentId()).thenReturn("20230001");
         lenient().when(user.getCohort()).thenReturn(cohort);
         lenient().when(user.getPart()).thenReturn(PartType.BACKEND);
+        lenient().when(user.getSystemRole()).thenReturn(SystemRole.MEMBER);
     }
 
     @Test
@@ -149,5 +168,86 @@ class CertificateServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("증명서를 정상적으로 발급한다")
+    void issueCertificate_success() {
+        UUID idempotencyKey = UUID.randomUUID();
+        FileAsset fileAsset = mock(FileAsset.class);
+        lenient().when(fileAsset.getObjectKey()).thenReturn("certificates/new.pdf");
+
+        when(idempotencyStore.find(1L, idempotencyKey)).thenReturn(Optional.empty());
+        when(idempotencyStore.reserve(1L, idempotencyKey)).thenReturn(true);
+        when(appUserRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(cohortRepository.findById(1L)).thenReturn(Optional.of(cohort));
+        when(pdfGenerationService.generateCertificatePdf(
+                anyString(), anyString(), anyString(), anyString(), anyString(), anyString(), any()
+        )).thenReturn(new byte[]{1, 2, 3});
+        when(fileAssetService.uploadPdf(any(), anyString(), eq(1L))).thenReturn(fileAsset);
+
+        ActivityCertificate saved = ActivityCertificate.builder()
+                .user(user)
+                .cohort(cohort)
+                .fileAsset(fileAsset)
+                .issueStatus(CertificateIssueStatus.ISSUED)
+                .nameSnapshot("홍길동")
+                .departmentSnapshot("컴퓨터공학과")
+                .studentIdSnapshot("20230001")
+                .partSnapshot(PartType.BACKEND)
+                .issuedAt(java.time.LocalDateTime.now())
+                .build();
+        when(activityCertificateRepository.save(any())).thenReturn(saved);
+
+        CertificateResponse response = certificateService.issueCertificate(1L, idempotencyKey);
+
+        assertThat(response.getSnapshot().getName()).isEqualTo("홍길동");
+        assertThat(response.getStatus()).isEqualTo(CertificateIssueStatus.ISSUED);
+        verify(idempotencyStore).complete(eq(1L), eq(idempotencyKey), any());
+    }
+
+    @Test
+    @DisplayName("이미 완료된 Idempotency-Key로 요청하면 기존 결과를 그대로 반환한다")
+    void issueCertificate_idempotentReplay_returnsExisting() {
+        UUID idempotencyKey = UUID.randomUUID();
+        ActivityCertificate existingCertificate = ActivityCertificate.builder()
+                .user(user)
+                .cohort(cohort)
+                .issueStatus(CertificateIssueStatus.ISSUED)
+                .nameSnapshot("홍길동")
+                .departmentSnapshot("컴퓨터공학과")
+                .studentIdSnapshot("20230001")
+                .partSnapshot(PartType.BACKEND)
+                .issuedAt(java.time.LocalDateTime.now())
+                .build();
+
+        when(idempotencyStore.find(1L, idempotencyKey))
+                .thenReturn(Optional.of(CertificateIdempotencyRecord.completed(10L)));
+        when(activityCertificateRepository.findById(10L)).thenReturn(Optional.of(existingCertificate));
+
+        CertificateResponse response = certificateService.issueCertificate(1L, idempotencyKey);
+
+        assertThat(response.getSnapshot().getName()).isEqualTo("홍길동");
+        verify(appUserRepository, never()).findById(anyLong());
+        verify(pdfGenerationService, never()).generateCertificatePdf(
+                anyString(), anyString(), anyString(), anyString(), anyString(), anyString(), any()
+        );
+    }
+
+    @Test
+    @DisplayName("동시에 같은 Idempotency-Key로 요청이 겹치면(PENDING) CONFLICT 예외가 발생한다")
+    void issueCertificate_pendingConflict_fails() {
+        UUID idempotencyKey = UUID.randomUUID();
+
+        when(idempotencyStore.find(1L, idempotencyKey)).thenReturn(Optional.empty());
+        when(idempotencyStore.reserve(1L, idempotencyKey)).thenReturn(false);
+        when(idempotencyStore.find(1L, idempotencyKey))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(CertificateIdempotencyRecord.pending()));
+
+        assertThatThrownBy(() -> certificateService.issueCertificate(1L, idempotencyKey))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.CONFLICT);
     }
 }

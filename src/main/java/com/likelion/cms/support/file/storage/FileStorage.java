@@ -10,6 +10,8 @@ public interface FileStorage {
 
     PresignedDownload createDownloadUrl(String objectKey);
 
+    void uploadDirectly(String objectKey, byte[] content, String mimeType);
+
     Optional<StoredFileMetadata> findMetadata(String objectKey);
 
     record PresignedUpload(
