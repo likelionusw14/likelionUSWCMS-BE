@@ -46,3 +46,4 @@ jobs:
           script: |
             cd /home/ec2-user/likelionUSWCMS-BE
             docker compose up --build -d
+            docker image prune -f
