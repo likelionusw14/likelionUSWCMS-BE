@@ -12,6 +12,8 @@
 | --- | --- |
 | `DB_PASSWORD` | MySQL root 비밀번호 |
 | `JWT_SECRET` | JWT 서명 키. HS256 을 쓰므로 32자 이상 문자열 |
+| `S3_BUCKET_NAME` | Private S3 파일 버킷명 |
+| `AWS_REGION` | S3 버킷 리전. 기본값 `ap-northeast-2` |
 
 ## 로컬 실행
 
@@ -36,10 +38,16 @@ mysql -h 127.0.0.1 -P 3306 -u root -p cms < db/schema.sql
 ### 3. 애플리케이션 실행
 
 ```bash
-DB_PASSWORD=<위와_동일한_비밀번호> JWT_SECRET=<32자_이상_문자열> ./gradlew bootRun
+DB_PASSWORD=<위와_동일한_비밀번호> \
+JWT_SECRET=<32자_이상_문자열> \
+S3_BUCKET_NAME=likelion-usw-cms-files \
+AWS_REGION=ap-northeast-2 \
+./gradlew bootRun
 ```
 
 `JWT_SECRET` 은 기본값이 없어서 지정하지 않으면 기동이 실패한다.
+로컬에서 실제 S3 API를 호출하려면 AWS CLI 프로필 등 AWS SDK 기본 자격증명 체인에
+사용 가능한 자격증명이 있어야 한다. 배포 환경에서는 EC2 IAM Role을 사용한다.
 `http://localhost:8080/health` 가 `OK` 를 반환하면 정상이다.
 
 ## 테스트

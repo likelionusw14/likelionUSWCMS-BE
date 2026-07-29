@@ -17,6 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.YearMonth;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +29,25 @@ public class ScheduleService {
     private final ScheduleRepository scheduleRepository;
     private final CohortRepository cohortRepository;
     private final AppUserRepository appUserRepository;
+
+    public List<ScheduleResponse> getSchedules(YearMonth yearMonth, Long cohortId) {
+        LocalDate start = yearMonth.atDay(1);
+        LocalDate end = yearMonth.atEndOfMonth();
+
+        List<Schedule> schedules = (cohortId != null)
+                ? scheduleRepository.findByScheduleDateBetweenAndCohort_CohortIdOrderByIsAllDayDescStartTimeAscTitleAsc(start, end, cohortId)
+                : scheduleRepository.findByScheduleDateBetweenOrderByIsAllDayDescStartTimeAscTitleAsc(start, end);
+
+        return schedules.stream()
+                .map(ScheduleResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    public ScheduleResponse getSchedule(Long scheduleId) {
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        return ScheduleResponse.from(schedule);
+    }
 
     @Transactional
     public ScheduleResponse create(CreateScheduleRequest request, Long actorUserId) {
@@ -70,6 +92,9 @@ public class ScheduleService {
 
         schedule.update(finalTitle, finalDescription, finalScheduleDate, finalIsAllDay, finalStartTime, finalLocation);
 
+        // @Version은 실제 UPDATE(flush) 시점에 증가한다. flush 없이 응답을 만들면
+        // 갱신 전 version이 내려가 클라이언트의 다음 수정이 낙관적 락 충돌을 낸다.
+        scheduleRepository.flush();
         return ScheduleResponse.from(schedule);
     }
 
