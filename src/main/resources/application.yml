@@ -31,9 +31,9 @@ kakao:
 
 app:
   frontend:
-    app-redirect-uri: ${FRONTEND_APP_REDIRECT_URI}
-    onboarding-redirect-uri: ${FRONTEND_ONBOARDING_REDIRECT_URI}
-    error-redirect-uri: ${FRONTEND_ERROR_REDIRECT_URI}
+    default-origin: ${FRONTEND_DEFAULT_ORIGIN}
+    callback-path: ${FRONTEND_CALLBACK_PATH:/auth/callback}
+    allowed-origins: ${FRONTEND_ALLOWED_ORIGINS:}
 
 jwt:
   secret: ${JWT_SECRET}
