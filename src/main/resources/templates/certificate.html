@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <title>활동증명서</title>
     <style>
+        @page {
+            size: A4;
+            margin: 0;
+        }
         @font-face {
             font-family: 'NotoSansKR';
             src: url('classpath:/fonts/NotoSansKR-Regular.ttf');
@@ -14,182 +18,135 @@
             src: url('classpath:/fonts/NotoSansKR-Bold.ttf');
             font-weight: bold;
         }
-        * {
-            box-sizing: border-box;
-        }
         body {
             font-family: 'NotoSansKR', sans-serif;
             margin: 0;
-            padding: 20px 0;
-            color: #1a1a1a;
-        }
-
-        .certificate-frame {
-            border: 0.75px solid #ccc;
-            padding: 36px 70px;
+            padding: 60px;
             position: relative;
+            min-height: 297mm;
+            box-sizing: border-box;
         }
-
         h1 {
             font-weight: bold;
-            font-size: 27px;
             text-align: center;
-            margin: 8px 0 0 0;
-            letter-spacing: 2px;
+            margin-top: 60px;
         }
-
-        .subtitle {
-            text-align: center;
-            font-size: 11px;
-            color: #999;
-            letter-spacing: 3px;
-            margin: 2px 0 32px 0;
-            font-weight: normal;
+        table.info-table {
+            width: 480px;
+            margin: 60px 0 0 160px;
+            border-collapse: collapse;
         }
-
-        .info-grid {
-            width: 100%;
-            max-width: 620px;
-            margin: 0 auto;
-            border-top: 1px solid #ccc;
-            border-bottom: 1px solid #ccc;
-            overflow: hidden;
+        table.info-table td {
+            padding: 14px 0;
+            font-size: 18px;
         }
-        .info-item {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-            overflow: hidden;
-        }
-        .info-item:last-child {
-            border-bottom: none;
-        }
-        .info-label {
-            float: left;
-            width: 90px;
-            font-size: 11px;
-            font-weight: normal;
-            color: #999;
-            line-height: 1.4;
-        }
-        .info-value {
-            overflow: hidden;
-            font-size: 13px;
-            font-weight: normal;
-            color: #333;
-            line-height: 1.4;
-        }
-        .info-value.emphasis {
+        table.info-table td.label {
+            width: 150px;
             font-weight: bold;
-            color: #111;
-            font-size: 17px;
         }
-
+        .evidence-list {
+            width: 480px;
+            margin: 30px auto 0 auto;
+            padding-left: 20px;
+        }
+        .evidence-list li {
+            margin-bottom: 6px;
+        }
         .confirm-text {
             font-weight: bold;
-            font-size: 15px;
-            margin-top: 32px;
+            font-size: 20px;
+            margin-top: 50px; /*70*/
             text-align: center;
-            line-height: 1.6;
         }
-
         .issued-date {
             font-weight: bold;
-            font-size: 14px;
             text-align: center;
-            margin-top: 16px;
+            margin-top: 55px;
+        }
+        .signature-block {
+            margin-top: 20px;
+            text-align: center;
+            position: relative;
+        }
+        .signature-name {
+            display: inline-block;
+            position: relative;
+            font-weight: bold;
+            font-size: 19px;
+        }
+        .stamp-anchor {
+            position: relative;
+            display: inline-block;
         }
 
-        .signature-block {
-            width: 100%;
-            max-width: 620px;
-            margin: 28px auto 0 auto;
-            text-align: center;
-        }
-        .signature-line {
-            font-size: 18px;
-            font-weight: bold;
-            position: relative;
-            display: inline-block;
-        }
-        .seal-anchor {
-            position: relative;
-            display: inline-block;
-        }
         .signature-image {
             position: absolute;
-            left: 4px;
             top: 50%;
+            left: 0;                                  /* right: 0 -> left: 0 */
             transform: translateY(-50%);
-            width: 80px;
-            filter: contrast(1.4) brightness(0.85);
+            width: 90px; /*72*/
+            filter: contrast(7.0) brightness(0.35);
         }
-
         .footer-logo {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 24px;
             text-align: center;
-            margin-top: 20px;
         }
         .footer-logo img {
-            height: 24px;
+            height: 18px;
         }
     </style>
 </head>
 <body>
 
-<div class="certificate-frame">
+<h1>동아리 활동 증명서</h1>
 
-    <h1>동아리 활동 증명서</h1>
-    <p class="subtitle">CLUB ACTIVITY CERTIFICATE</p>
+<table class="info-table">
+    <tr>
+        <td class="label">학번</td>
+        <td th:text="${studentId}"></td>
+    </tr>
+    <tr>
+        <td class="label">성명</td>
+        <td th:text="${name}"></td>
+    </tr>
+    <tr>
+        <td class="label">소속학과</td>
+        <td th:text="${department}"></td>
+    </tr>
+    <tr>
+        <td class="label">소속동아리</td>
+        <td th:text="${clubName}"></td>
+    </tr>
+    <tr>
+        <td class="label">기수 / 역할</td>
+        <td>
+            <span th:text="${cohortName}"></span>
+            <span th:text="${activityType}"></span>
+            <span th:text="${part}"></span>
+        </td>
+    </tr>
+</table>
 
-    <div class="info-grid">
-        <div class="info-item">
-            <span class="info-label">학번</span>
-            <span class="info-value" th:text="${studentId}"></span>
-        </div>
-        <div class="info-item">
-            <span class="info-label">성명</span>
-            <span class="info-value emphasis" th:text="${name}"></span>
-        </div>
-        <div class="info-item">
-            <span class="info-label">소속학과</span>
-            <span class="info-value" th:text="${department}"></span>
-        </div>
-        <div class="info-item">
-            <span class="info-label">소속동아리</span>
-            <span class="info-value" th:text="${clubName}"></span>
-        </div>
-        <div class="info-item">
-            <span class="info-label">기수 / 역할</span>
-            <span class="info-value">
-                <span th:text="${cohortName}"></span>
-                <span th:text="${activityType}"></span>
-                <span th:text="${part}"></span>
-            </span>
-        </div>
-        <div class="info-item">
-            <span class="info-label">활동기간</span>
-            <span class="info-value" th:text="${activityPeriod}"></span>
-        </div>
-    </div>
+<ul class="evidence-list" th:if="${evidenceList != null and !evidenceList.isEmpty()}">
+    <li th:each="item, iterStat : ${evidenceList}">
+        <span th:text="'[붙임 ' + (${iterStat.index} + 1) + '] ' + ${item}"></span>
+    </li>
+</ul>
 
-    <ul class="evidence-list" th:if="${evidenceList != null and !evidenceList.isEmpty()}">
-        <li th:each="item, iterStat : ${evidenceList}">
-            <span th:text="'[붙임 ' + (${iterStat.index} + 1) + '] ' + ${item}"></span>
-        </li>
-    </ul>
+<p class="confirm-text">상기 내용이 사실임을 증명합니다.</p>
 
-    <p class="confirm-text">상기 내용이 사실임을 증명합니다.</p>
+<p class="issued-date"><span th:text="${issuedDate}"></span></p>
 
-    <p class="issued-date"><span th:text="${issuedDate}"></span></p>
-
-    <div class="signature-block">
-        <span class="signature-line">
-            <span th:text="${clubName}"></span> 대표 <span th:text="${representativeName}"></span>
-            <span class="seal-anchor">(인)<img class="signature-image" src="classpath:/images/signature.png" /></span>
+<div class="signature-block">
+    <span class="signature-name">
+        멋쟁이사자처럼 수원대학교 대표 <span th:text="${representativeName}"></span>
+        <span class="stamp-anchor">(인)
+            <img class="signature-image" src="classpath:/images/signature.png" />
         </span>
-    </div>
-
+    </span>
 </div>
 
 <div class="footer-logo">

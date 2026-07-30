@@ -6,6 +6,8 @@ import com.likelion.cms.domain.certificate.dto.response.DownloadUrlResponse;
 import com.likelion.cms.domain.certificate.entity.ActivityCertificate;
 import com.likelion.cms.domain.certificate.entity.CertificateIssueStatus;
 import com.likelion.cms.domain.certificate.repository.ActivityCertificateRepository;
+import com.likelion.cms.domain.certificate.store.CertificateIdempotencyRecord;
+import com.likelion.cms.domain.certificate.store.CertificateIdempotencyStore;
 import com.likelion.cms.domain.cohort.entity.Cohort;
 import com.likelion.cms.domain.cohort.repository.CohortRepository;
 import com.likelion.cms.domain.user.entity.AppUser;
@@ -32,6 +34,7 @@ public class CertificateService {
     private final FileAssetService fileAssetService;
     private final CohortRepository cohortRepository;
     private final PdfGenerationService pdfGenerationService;
+    private final CertificateIdempotencyStore idempotencyStore;
 
     public CertificatePreviewResponse previewMyCertificateData(Long userId) {
         AppUser user = appUserRepository.findById(userId)
@@ -59,11 +62,28 @@ public class CertificateService {
 
     @Transactional
     public CertificateResponse issueCertificate(Long userId, UUID idempotencyKey) {
+        return idempotencyStore.find(userId, idempotencyKey)
+                .map(record -> handleExistingRecord(record, userId))
+                .orElseGet(() -> reserveAndCreate(userId, idempotencyKey));
+    }
 
-        // 이미 같은 키로 발급된 요청이 있으면 기존 결과 그대로 반환 (중복 발급 방지)
-        return activityCertificateRepository.findByIdempotencyKey(idempotencyKey)
-                .map(CertificateResponse::from)
-                .orElseGet(() -> createCertificate(userId, idempotencyKey));
+    private CertificateResponse handleExistingRecord(CertificateIdempotencyRecord record, Long userId) {
+        if (record.status() == CertificateIdempotencyRecord.Status.PENDING) {
+            throw new BusinessException(ErrorCode.CONFLICT);
+        }
+        ActivityCertificate certificate = activityCertificateRepository.findById(record.certificateId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        return CertificateResponse.from(certificate);
+    }
+
+    private CertificateResponse reserveAndCreate(Long userId, UUID idempotencyKey) {
+        boolean reserved = idempotencyStore.reserve(userId, idempotencyKey);
+        if (!reserved) {
+            CertificateIdempotencyRecord record = idempotencyStore.find(userId, idempotencyKey)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.CONFLICT));
+            return handleExistingRecord(record, userId);
+        }
+        return createCertificate(userId, idempotencyKey);
     }
 
     private CertificateResponse createCertificate(Long userId, UUID idempotencyKey) {
@@ -84,8 +104,6 @@ public class CertificateService {
                 cohort.getName(),
                 activityType,
                 user.getPart().name(),
-                cohort.getStartedAt(),
-                cohort.getEndedAt(),
                 issuedAt
         );
 
@@ -104,10 +122,11 @@ public class CertificateService {
                 .activityStartedAt(cohort.getStartedAt())
                 .activityEndedAt(cohort.getEndedAt())
                 .issuedAt(issuedAt)
-                .idempotencyKey(idempotencyKey)
                 .build();
 
         ActivityCertificate saved = activityCertificateRepository.save(certificate);
+
+        idempotencyStore.complete(userId, idempotencyKey, saved.getCertificateId());
 
         return CertificateResponse.from(saved);
     }

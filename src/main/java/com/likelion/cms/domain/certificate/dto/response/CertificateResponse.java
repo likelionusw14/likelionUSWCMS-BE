@@ -33,7 +33,6 @@ public class CertificateResponse {
                 certificate.getCohort().getNumber(),
                 certificate.getCohort().getName()
         );
-
         CertificatePreviewResponse snapshot = CertificatePreviewResponse.of(
                 certificate.getNameSnapshot(),
                 certificate.getDepartmentSnapshot(),
@@ -43,7 +42,6 @@ public class CertificateResponse {
                 certificate.getActivityStartedAt(),
                 certificate.getActivityEndedAt()
         );
-
         return of(
                 certificate.getCertificateId(),
                 certificate.getIssueStatus(),
