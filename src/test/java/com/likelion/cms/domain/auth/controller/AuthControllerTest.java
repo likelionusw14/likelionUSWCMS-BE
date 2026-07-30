@@ -58,9 +58,19 @@ class AuthControllerTest {
 
     @Test
     void loginRedirectsToKakaoAuthorizeUrl() throws Exception {
-        when(authService.startKakaoLogin()).thenReturn("https://kauth.kakao.com/oauth/authorize?client_id=x");
+        when(authService.startKakaoLogin(any())).thenReturn("https://kauth.kakao.com/oauth/authorize?client_id=x");
 
         mockMvc.perform(get("/api/auth/kakao/login"))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", "https://kauth.kakao.com/oauth/authorize?client_id=x"));
+    }
+
+    @Test
+    void loginPassesRequestedOriginThrough() throws Exception {
+        when(authService.startKakaoLogin("http://localhost:5173"))
+                .thenReturn("https://kauth.kakao.com/oauth/authorize?client_id=x");
+
+        mockMvc.perform(get("/api/auth/kakao/login").param("origin", "http://localhost:5173"))
                 .andExpect(status().isFound())
                 .andExpect(header().string("Location", "https://kauth.kakao.com/oauth/authorize?client_id=x"));
     }

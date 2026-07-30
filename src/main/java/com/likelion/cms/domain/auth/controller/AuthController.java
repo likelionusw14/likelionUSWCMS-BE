@@ -31,8 +31,9 @@ public class AuthController {
     private final CsrfCookieValidator csrfCookieValidator;
 
     @GetMapping("/kakao/login")
-    public ResponseEntity<Void> loginRedirect() {
-        String authorizeUrl = authService.startKakaoLogin();
+    public ResponseEntity<Void> loginRedirect(
+            @RequestParam(required = false) String origin) {
+        String authorizeUrl = authService.startKakaoLogin(origin);
         return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(authorizeUrl)).build();
     }
 
