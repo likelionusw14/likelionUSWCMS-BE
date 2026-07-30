@@ -58,27 +58,6 @@ class CertificateServiceTest {
     @Mock
     private CertificateIdempotencyStore idempotencyStore;
 
-    @InjectMocks
-    private CertificateService certificateService;
-
-    private Cohort cohort;
-    private AppUser user;
-
-    @BeforeEach
-    void setUp() {
-        cohort = mock(Cohort.class);
-        lenient().when(cohort.getCohortId()).thenReturn(1L);
-        lenient().when(cohort.getNumber()).thenReturn(9);
-        lenient().when(cohort.getName()).thenReturn("9기");
-
-        user = mock(AppUser.class);
-        lenient().when(user.getUserId()).thenReturn(1L);
-        lenient().when(user.getName()).thenReturn("홍길동");
-        lenient().when(user.getDepartment()).thenReturn("컴퓨터공학과");
-        lenient().when(user.getStudentId()).thenReturn("20230001");
-        lenient().when(user.getCohort()).thenReturn(cohort);
-        lenient().when(user.getPart()).thenReturn(PartType.BACKEND);
-        lenient().when(user.getSystemRole()).thenReturn(SystemRole.MEMBER);
     }
 
     @Test

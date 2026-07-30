@@ -16,10 +16,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -36,23 +40,42 @@ public class AuthService {
     private final AppUserRepository appUserRepository;
     private final JwtTokenProvider jwtTokenProvider;
 
-    @Value("${app.frontend.onboarding-redirect-uri}")
-    private String onboardingRedirectUri;
+    @Value("${app.frontend.default-origin}")
+    private String defaultFrontendOrigin;
 
-    @Value("${app.frontend.app-redirect-uri}")
-    private String appRedirectUri;
+    @Value("${app.frontend.callback-path}")
+    private String callbackPath;
 
-    @Value("${app.frontend.error-redirect-uri}")
-    private String errorRedirectUri;
+    @Value("${app.frontend.allowed-origins:}")
+    private String allowedOriginsRaw;
 
     @Value("${jwt.access-token-validity-seconds}")
     private long accessTokenValiditySeconds;
 
-    public String startKakaoLogin() {
+    /**
+     * requestedOrigin lets a client (e.g. a local dev frontend) ask to be
+     * redirected back to itself after login instead of the configured
+     * default. Only exact matches against app.frontend.allowed-origins are
+     * honored -- anything else is silently dropped (falls back to the
+     * default redirect URI) rather than rejecting the login, since this is
+     * a convenience feature, not something the request should fail over.
+     */
+    public String startKakaoLogin(String requestedOrigin) {
         String state = OpaqueTokenGenerator.generate();
         String nonce = OpaqueTokenGenerator.generate();
-        oidcStateStore.save(state, nonce);
+        String validatedOrigin = allowedOrigins().contains(requestedOrigin) ? requestedOrigin : null;
+        oidcStateStore.save(state, nonce, validatedOrigin);
         return kakaoOidcClient.buildAuthorizeUrl(state, nonce);
+    }
+
+    private Set<String> allowedOrigins() {
+        if (!StringUtils.hasText(allowedOriginsRaw)) {
+            return Set.of();
+        }
+        return Arrays.stream(allowedOriginsRaw.split(","))
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
     }
 
     /**
@@ -65,24 +88,40 @@ public class AuthService {
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public CallbackResult handleKakaoCallback(String code, String state, String error) {
-        if (StringUtils.hasText(error) || !StringUtils.hasText(code)) {
-            return new CallbackResult(URI.create(errorRedirectUri), List.of());
+        OidcStateStore.StateValue stateValue = StringUtils.hasText(state)
+                ? oidcStateStore.consume(state).orElse(null)
+                : null;
+        String origin = stateValue == null ? null : stateValue.frontendOrigin();
+
+        if (StringUtils.hasText(error)) {
+            return errorResult(origin, "access_denied");
+        }
+        if (stateValue == null) {
+            return errorResult(origin, "invalid_state");
+        }
+        if (!StringUtils.hasText(code)) {
+            return errorResult(origin, "server_error");
         }
 
         try {
-            return doHandleKakaoCallback(code, state);
+            return doHandleKakaoCallback(code, stateValue, origin);
+        } catch (KakaoExchangeFailedException e) {
+            log.warn("카카오 토큰 교환 실패: {}", e.getCause().getMessage());
+            return errorResult(origin, "kakao_error");
         } catch (BusinessException e) {
             log.warn("카카오 로그인 콜백 처리 실패: {}", e.getMessage());
-            return new CallbackResult(URI.create(errorRedirectUri), List.of());
+            return errorResult(origin, "server_error");
         }
     }
 
-    private CallbackResult doHandleKakaoCallback(String code, String state) {
-        String nonce = oidcStateStore.consumeNonce(state)
-                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED, "로그인 요청이 만료되었거나 유효하지 않습니다."));
-
-        KakaoTokenResponse tokenResponse = kakaoOidcClient.exchangeCodeForTokens(code);
-        String kakaoSubject = kakaoIdTokenVerifier.verify(tokenResponse.idToken(), nonce);
+    private CallbackResult doHandleKakaoCallback(String code, OidcStateStore.StateValue stateValue, String origin) {
+        KakaoTokenResponse tokenResponse;
+        try {
+            tokenResponse = kakaoOidcClient.exchangeCodeForTokens(code);
+        } catch (BusinessException e) {
+            throw new KakaoExchangeFailedException(e);
+        }
+        String kakaoSubject = kakaoIdTokenVerifier.verify(tokenResponse.idToken(), stateValue.nonce());
 
         Optional<AppUser> existingUser = appUserRepository.findByKakaoSubject(kakaoSubject);
         String csrfToken = OpaqueTokenGenerator.generate();
@@ -92,14 +131,37 @@ public class AuthService {
             List<ResponseCookie> cookies = List.of(
                     authCookieFactory.refreshSessionCookie(refreshToken),
                     authCookieFactory.csrfCookieForRefresh(csrfToken));
-            return new CallbackResult(URI.create(appRedirectUri), cookies);
+            return new CallbackResult(callbackUri(origin, "status", "member"), cookies);
         }
 
         String onboardingSessionId = onboardingSessionStore.create(kakaoSubject);
         List<ResponseCookie> cookies = List.of(
                 authCookieFactory.onboardingSessionCookie(onboardingSessionId),
                 authCookieFactory.csrfCookieForOnboarding(csrfToken));
-        return new CallbackResult(URI.create(onboardingRedirectUri), cookies);
+        return new CallbackResult(callbackUri(origin, "status", "onboarding"), cookies);
+    }
+
+    private CallbackResult errorResult(String origin, String errorCode) {
+        return new CallbackResult(callbackUri(origin, "error", errorCode), List.of());
+    }
+
+    /**
+     * Builds {origin}{callbackPath}?paramName=paramValue, using the caller's
+     * validated origin when present (see startKakaoLogin) and falling back
+     * to app.frontend.default-origin otherwise.
+     */
+    private URI callbackUri(String validatedOrigin, String paramName, String paramValue) {
+        String base = (validatedOrigin != null ? validatedOrigin : defaultFrontendOrigin) + callbackPath;
+        return UriComponentsBuilder.fromUriString(base)
+                .queryParam(paramName, paramValue)
+                .build()
+                .toUri();
+    }
+
+    private static final class KakaoExchangeFailedException extends RuntimeException {
+        KakaoExchangeFailedException(Throwable cause) {
+            super(cause);
+        }
     }
 
     public ReissueResult reissueAccessToken(String rawRefreshToken) {

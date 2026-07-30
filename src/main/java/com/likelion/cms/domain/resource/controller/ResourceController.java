@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.likelion.cms.support.file.dto.response.DownloadUrlResponse;
 
 @Validated
 @RestController
@@ -30,6 +31,11 @@ public class ResourceController {
             @RequestParam(defaultValue = "20") @Positive int size
     ) {
         return resourceService.getResources(week, targetPart, page, size);
+    }
+
+    @GetMapping("/{resourceId}/download-url")
+    public DownloadUrlResponse getDownloadUrl(@PathVariable @Positive Long resourceId) {
+        return resourceService.getDownloadUrl(resourceId);
     }
 
     @GetMapping("/{resourceId}")

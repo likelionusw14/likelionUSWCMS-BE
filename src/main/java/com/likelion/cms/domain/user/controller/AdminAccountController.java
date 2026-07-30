@@ -64,6 +64,16 @@ public class AdminAccountController {
         return userService.list(status, role, cohortId, part, keyword, boundedPageable);
     }
 
+    // GET /api/admin/accounts/{userId} - 단건 조회
+    @GetMapping("/{userId}")
+    public AccountResponse get(
+            @AuthenticationPrincipal CurrentUserPrincipal principal,
+            @PathVariable @Positive Long userId
+    ) {
+        adminAccessGuard.requireAdmin(principal);
+        return userService.get(userId);
+    }
+
     // PATCH /api/admin/accounts/{userId}/approval - 가입 승인
     @PatchMapping("/{userId}/approval")
     public AccountResponse approve(

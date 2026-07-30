@@ -48,6 +48,25 @@ class UserServiceTest {
     }
 
     @Test
+    void getReturnsAccount() {
+        AppUser target = accountWith(2L, AccountStatus.ACTIVE, SystemRole.MEMBER, 0);
+        when(appUserRepository.findById(2L)).thenReturn(Optional.of(target));
+
+        AccountResponse response = userService.get(2L);
+
+        assertThat(response.getUserId()).isEqualTo(2L);
+    }
+
+    @Test
+    void getRejectsMissingAccount() {
+        when(appUserRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.get(99L))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.RESOURCE_NOT_FOUND));
+    }
+
+    @Test
     void approveActivatesPendingAccount() {
         AppUser actor = accountWith(1L, AccountStatus.ACTIVE, SystemRole.ADMIN, 0);
         AppUser target = accountWith(2L, AccountStatus.PENDING, SystemRole.MEMBER, 0);

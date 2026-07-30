@@ -45,6 +45,11 @@ public class UserService {
         return PageResponse.from(accounts.map(AccountResponse::from));
     }
 
+    // 단건 조회.
+    public AccountResponse get(Long userId) {
+        return AccountResponse.from(findAccount(userId));
+    }
+
     // 가입 승인. 대기 중(PENDING)이 아닌 계정을 다시 승인하는 건 막음.
     @Transactional
     public AccountResponse approve(Long userId, ApproveAccountRequest request, Long actorUserId) {

@@ -1,5 +1,6 @@
 package com.likelion.cms.domain.resource.service;
 
+import com.likelion.cms.support.file.service.FileAssetService;
 import com.likelion.cms.common.type.PartType;
 import com.likelion.cms.domain.resource.dto.request.CreateLearningResourceRequest;
 import com.likelion.cms.domain.resource.dto.request.UpdateLearningResourceRequest;
@@ -46,12 +47,16 @@ class ResourceServiceTest {
 
     private ResourceService resourceService;
 
+    @Mock
+    private FileAssetService fileAssetService;
+
     @BeforeEach
     void setUp() {
         resourceService = new ResourceService(
                 learningResourceRepository,
                 fileAssetRepository,
-                appUserRepository
+                appUserRepository,
+                fileAssetService
         );
     }
 

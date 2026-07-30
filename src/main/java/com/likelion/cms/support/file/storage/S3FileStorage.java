@@ -86,7 +86,7 @@ public class S3FileStorage implements FileStorage {
             throw new BusinessException(ErrorCode.FILE_STORAGE_ERROR);
         }
     }
-    
+
     @Override
     public PresignedDownload createDownloadUrl(String objectKey) {
         assertConfigured();
