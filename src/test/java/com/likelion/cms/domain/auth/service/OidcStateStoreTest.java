@@ -74,6 +74,19 @@ class OidcStateStoreTest {
     }
 
     @Test
+    void consumeTreatsNonJsonValueAsLegacyRawNonce() {
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.getAndDelete("auth:oidc:state:state-1"))
+                .thenReturn("legacy-raw-nonce-value");
+
+        Optional<OidcStateStore.StateValue> result = store.consume("state-1");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().nonce()).isEqualTo("legacy-raw-nonce-value");
+        assertThat(result.get().frontendOrigin()).isNull();
+    }
+
+    @Test
     void consumeReturnsEmptyWhenStateUnknown() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.getAndDelete(anyString())).thenReturn(null);

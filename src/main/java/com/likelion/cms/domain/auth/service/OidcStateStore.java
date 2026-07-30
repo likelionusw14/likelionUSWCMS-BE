@@ -45,11 +45,17 @@ public class OidcStateStore {
         }
     }
 
-    private StateValue deserialize(String json) {
+    /**
+     * A value that fails JSON parsing is a raw nonce written by the
+     * pre-dynamic-redirect version of this store (state TTL is 10 minutes,
+     * so these only exist briefly after a deploy). Treat it as a legacy
+     * entry with no frontend origin instead of failing the callback.
+     */
+    private StateValue deserialize(String value) {
         try {
-            return objectMapper.readValue(json, StateValue.class);
+            return objectMapper.readValue(value, StateValue.class);
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("OIDC state 역직렬화에 실패했습니다.", e);
+            return new StateValue(value, null);
         }
     }
 
