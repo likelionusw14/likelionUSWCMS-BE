@@ -6,6 +6,8 @@ import com.likelion.cms.domain.user.entity.AccountStatus;
 import com.likelion.cms.domain.user.entity.SystemRole;
 import com.likelion.cms.domain.user.service.UserService;
 import com.likelion.cms.global.config.SecurityConfig;
+import com.likelion.cms.global.exception.BusinessException;
+import com.likelion.cms.global.exception.ErrorCode;
 import com.likelion.cms.global.jwt.JwtTokenProvider;
 import com.likelion.cms.global.response.PageMeta;
 import com.likelion.cms.global.response.PageResponse;
@@ -50,6 +52,34 @@ class AdminAccountControllerTest {
     // 실제 토큰 검증 로직은 안 쓰니 mock으로만 채워둠.
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
+
+    @Test
+    void getReturnsAccount() throws Exception {
+        when(userService.get(2L)).thenReturn(accountResponse());
+
+        mockMvc.perform(get("/api/admin/accounts/2")
+                        .with(authentication(adminAuthentication())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(2));
+    }
+
+    @Test
+    void getRejectsMissingAccount() throws Exception {
+        when(userService.get(99L)).thenThrow(new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        mockMvc.perform(get("/api/admin/accounts/99")
+                        .with(authentication(adminAuthentication())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("C002"));
+    }
+
+    @Test
+    void getRejectsUnauthenticatedRequest() throws Exception {
+        mockMvc.perform(get("/api/admin/accounts/2"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("C004"));
+        verify(userService, never()).get(any());
+    }
 
     @Test
     void approveReturnsUpdatedAccount() throws Exception {
