@@ -24,35 +24,20 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
 
-#kakao:
-#  client-id: ${KAKAO_CLIENT_ID}
-#  client-secret: ${KAKAO_CLIENT_SECRET:}
-#  redirect-uri: ${KAKAO_REDIRECT_URI}
-#
-#app:
-#  frontend:
-#    app-redirect-uri: ${FRONTEND_APP_REDIRECT_URI}
-#    onboarding-redirect-uri: ${FRONTEND_ONBOARDING_REDIRECT_URI}
-#    error-redirect-uri: ${FRONTEND_ERROR_REDIRECT_URI}
-#
-#jwt:
-#  secret: ${JWT_SECRET}
-#  access-token-validity-seconds: ${JWT_ACCESS_TOKEN_VALIDITY_SECONDS:1800}
-
 kakao:
-  client-id: temporary-test-value
-  client-secret: temporary-test-secret
-  redirect-uri: http://localhost:8080/api/auth/kakao/callback
+  client-id: ${KAKAO_CLIENT_ID}
+  client-secret: ${KAKAO_CLIENT_SECRET:}
+  redirect-uri: ${KAKAO_REDIRECT_URI}
 
 app:
   frontend:
-    app-redirect-uri: http://localhost:3000
-    onboarding-redirect-uri: http://localhost:3000/onboarding
-    error-redirect-uri: http://localhost:3000/error
+    app-redirect-uri: ${FRONTEND_APP_REDIRECT_URI}
+    onboarding-redirect-uri: ${FRONTEND_ONBOARDING_REDIRECT_URI}
+    error-redirect-uri: ${FRONTEND_ERROR_REDIRECT_URI}
 
 jwt:
-  secret: temporary-local-dev-secret-key-1234567890abcdefghijklmnop
-  access-token-validity-seconds: 1800
+  secret: ${JWT_SECRET}
+  access-token-validity-seconds: ${JWT_ACCESS_TOKEN_VALIDITY_SECONDS:1800}
 
 storage:
   s3:
