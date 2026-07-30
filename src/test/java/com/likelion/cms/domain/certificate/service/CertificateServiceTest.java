@@ -26,6 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.OffsetDateTime;
 import java.util.Optional;
@@ -58,6 +59,30 @@ class CertificateServiceTest {
     @Mock
     private CertificateIdempotencyStore idempotencyStore;
 
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
+    @InjectMocks
+    private CertificateService certificateService;
+
+    private Cohort cohort;
+    private AppUser user;
+
+    @BeforeEach
+    void setUp() {
+        cohort = mock(Cohort.class);
+        lenient().when(cohort.getCohortId()).thenReturn(1L);
+        lenient().when(cohort.getNumber()).thenReturn(9);
+        lenient().when(cohort.getName()).thenReturn("9기");
+
+        user = mock(AppUser.class);
+        lenient().when(user.getUserId()).thenReturn(1L);
+        lenient().when(user.getName()).thenReturn("홍길동");
+        lenient().when(user.getDepartment()).thenReturn("컴퓨터공학과");
+        lenient().when(user.getStudentId()).thenReturn("20230001");
+        lenient().when(user.getCohort()).thenReturn(cohort);
+        lenient().when(user.getPart()).thenReturn(PartType.BACKEND);
+        lenient().when(user.getSystemRole()).thenReturn(SystemRole.MEMBER);
     }
 
     @Test
@@ -177,6 +202,10 @@ class CertificateServiceTest {
                 .issuedAt(java.time.LocalDateTime.now())
                 .build();
         when(activityCertificateRepository.save(any())).thenReturn(saved);
+        when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
+            org.springframework.transaction.support.TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(null);
+        });
 
         CertificateResponse response = certificateService.issueCertificate(1L, idempotencyKey);
 
