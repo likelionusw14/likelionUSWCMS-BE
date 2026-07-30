@@ -20,6 +20,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.likelion.cms.support.file.dto.response.DownloadUrlResponse;
+import com.likelion.cms.support.file.service.FileAssetService;
+import com.likelion.cms.support.file.storage.FileStorage;
 
 import java.util.List;
 
@@ -31,6 +34,7 @@ public class ResourceService {
     private final LearningResourceRepository learningResourceRepository;
     private final FileAssetRepository fileAssetRepository;
     private final AppUserRepository appUserRepository;
+    private final FileAssetService fileAssetService;
 
     @Transactional
     public LearningResourceResponse create(CreateLearningResourceRequest request, Long actorUserId) {
@@ -94,6 +98,17 @@ public class ResourceService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
 
         return LearningResourceResponse.from(resource);
+    }
+
+    public DownloadUrlResponse getDownloadUrl(Long resourceId) {
+        LearningResource resource = learningResourceRepository.findById(resourceId)
+                .filter(candidate -> candidate.getArchivedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        FileStorage.PresignedDownload presigned =
+                fileAssetService.createDownloadUrl(resource.getFileAsset().getObjectKey());
+
+        return DownloadUrlResponse.of(presigned.downloadUrl(), presigned.expiresAt());
     }
 
     private PageMeta toPageMeta(Page<?> page) {
