@@ -117,7 +117,10 @@ public class CertificateService {
             String fileName = "활동증명서_" + user.getName() + ".pdf";
             FileAsset fileAsset = fileAssetService.uploadPdf(pdfBytes, fileName, userId);
 
-            // 🟠 2) DB save만 짧은 트랜잭션으로 감싸기
+            // 🟠 2) DB save만 짧은 독립 트랜잭션(REQUIRES_NEW)으로 감싼다.
+            //  - issueCertificate를 감싼 클래스 레벨 readOnly 트랜잭션과 분리해 쓰기를 수행하고,
+            //  - execute()가 반환되는 시점에 이 쓰기가 실제로 커밋된다(아래 complete() 호출 전).
+            //  전파 설정은 TransactionConfig의 transactionTemplate 빈 참고.
             ActivityCertificate saved = transactionTemplate.execute(status -> {
                 ActivityCertificate certificate = ActivityCertificate.builder()
                         .user(user)
