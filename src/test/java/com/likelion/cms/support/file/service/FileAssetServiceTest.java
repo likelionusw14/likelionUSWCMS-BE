@@ -1,5 +1,6 @@
 package com.likelion.cms.support.file.service;
 
+import com.likelion.cms.domain.user.repository.AppUserRepository;
 import com.likelion.cms.global.exception.BusinessException;
 import com.likelion.cms.global.exception.ErrorCode;
 import com.likelion.cms.support.file.dto.request.FileAssetRequest;
@@ -7,6 +8,7 @@ import com.likelion.cms.support.file.dto.request.FileUploadUrlRequest;
 import com.likelion.cms.support.file.dto.response.FileAssetResponse;
 import com.likelion.cms.support.file.dto.response.FileUploadUrlResponse;
 import com.likelion.cms.support.file.entity.FilePurpose;
+import com.likelion.cms.support.file.repository.FileAssetRepository;
 import com.likelion.cms.support.file.storage.FileStorage;
 import com.likelion.cms.support.file.store.FileIdempotencyRecord;
 import com.likelion.cms.support.file.store.FileIdempotencyStore;
@@ -57,6 +59,10 @@ class FileAssetServiceTest {
     private FileIdempotencyStore idempotencyStore;
     @Mock
     private FileAssetRegistrationService registrationService;
+    @Mock
+    private FileAssetRepository fileAssetRepository;
+    @Mock
+    private AppUserRepository appUserRepository;
 
     private FileAssetService service;
 
@@ -68,7 +74,9 @@ class FileAssetServiceTest {
                 fileStorage,
                 uploadGrantStore,
                 idempotencyStore,
-                registrationService
+                registrationService,
+                fileAssetRepository,
+                appUserRepository
         );
     }
 

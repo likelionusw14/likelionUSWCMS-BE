@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "ActivityCertificate", indexes = {
@@ -20,7 +21,8 @@ import java.time.LocalDateTime;
         @Index(name = "idx_certificate_cohort_id", columnList = "cohortId"),
         @Index(name = "idx_certificate_file_asset", columnList = "fileAssetId"),
         @Index(name = "idx_certificate_issue_status", columnList = "issueStatus"),
-        @Index(name = "idx_certificate_user_created", columnList = "userId, createdAt")
+        @Index(name = "idx_certificate_user_created", columnList = "userId, createdAt"),
+        @Index(name = "idx_certificate_idempotency_key", columnList = "idempotencyKey", unique = true)
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -68,13 +70,16 @@ public class ActivityCertificate extends BaseTimeEntity {
     @Column(length = 1000)
     private String failureReason;
 
+    @Column(unique = true)
+    private UUID idempotencyKey;
+
     @Builder
     private ActivityCertificate(AppUser user, Cohort cohort, FileAsset fileAsset,
                                 CertificateIssueStatus issueStatus, String nameSnapshot,
                                 String departmentSnapshot, String studentIdSnapshot,
                                 PartType partSnapshot, LocalDate activityStartedAt,
                                 LocalDate activityEndedAt, LocalDateTime issuedAt,
-                                String failureReason) {
+                                String failureReason, UUID idempotencyKey) {
         this.user = user;
         this.cohort = cohort;
         this.fileAsset = fileAsset;
@@ -87,5 +92,6 @@ public class ActivityCertificate extends BaseTimeEntity {
         this.activityEndedAt = activityEndedAt;
         this.issuedAt = issuedAt;
         this.failureReason = failureReason;
+        this.idempotencyKey = idempotencyKey;
     }
 }
