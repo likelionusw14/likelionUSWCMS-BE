@@ -1,11 +1,15 @@
 package com.likelion.cms.support.file.service;
 
+import com.likelion.cms.domain.user.repository.AppUserRepository;
 import com.likelion.cms.global.exception.BusinessException;
 import com.likelion.cms.global.exception.ErrorCode;
 import com.likelion.cms.support.file.dto.request.FileAssetRequest;
 import com.likelion.cms.support.file.dto.request.FileUploadUrlRequest;
 import com.likelion.cms.support.file.dto.response.FileAssetResponse;
 import com.likelion.cms.support.file.dto.response.FileUploadUrlResponse;
+import com.likelion.cms.support.file.entity.FileAsset;
+import com.likelion.cms.support.file.entity.FilePurpose;
+import com.likelion.cms.support.file.repository.FileAssetRepository;
 import com.likelion.cms.support.file.service.FileUploadPolicy.ValidatedFile;
 import com.likelion.cms.support.file.storage.FileStorage;
 import com.likelion.cms.support.file.storage.FileStorage.PresignedUpload;
@@ -32,6 +36,8 @@ public class FileAssetService {
     private final FileUploadGrantStore uploadGrantStore;
     private final FileIdempotencyStore idempotencyStore;
     private final FileAssetRegistrationService registrationService;
+    private final FileAssetRepository fileAssetRepository;
+    private final AppUserRepository appUserRepository;
 
     public FileUploadUrlResponse createUploadUrl(FileUploadUrlRequest request, Long actorUserId) {
         ValidatedFile file = fileUploadPolicy.validate(
@@ -102,9 +108,6 @@ public class FileAssetService {
                     request.objectKey(),
                     response.getFileAssetId()
             );
-            // 등록·완료 이후의 grant 정리는 부수 작업이다. 여기서 실패해도 이미 성공한
-            // 요청을 에러로 되돌리거나 clearPending으로 되돌리면 안 되므로 best-effort로 처리한다.
-            // (남은 grant는 TTL로 만료된다.)
             deleteGrantQuietly(request.objectKey());
             return response;
         } catch (RuntimeException exception) {
@@ -163,4 +166,20 @@ public class FileAssetService {
         return fileStorage.createDownloadUrl(objectKey);
     }
 
+    public FileAsset uploadPdf(byte[] pdfBytes, String originalFileName, Long uploadedByUserId) {
+        String objectKey = objectKeyFactory.create(FilePurpose.CERTIFICATE, "pdf");
+
+        fileStorage.uploadDirectly(objectKey, pdfBytes, "application/pdf");
+
+        FileAsset fileAsset = FileAsset.builder()
+                .purpose(FilePurpose.CERTIFICATE)
+                .objectKey(objectKey)
+                .originalFileName(originalFileName)
+                .mimeType("application/pdf")
+                .sizeBytes((long) pdfBytes.length)
+                .uploadedByUser(appUserRepository.findById(uploadedByUserId).orElseThrow())
+                .build();
+
+        return fileAssetRepository.save(fileAsset);
+    }
 }

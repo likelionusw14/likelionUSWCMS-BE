@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>활동증명서</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        @font-face {
+            font-family: 'NotoSansKR';
+            src: url('classpath:/fonts/NotoSansKR-Regular.ttf');
+            font-weight: normal;
+        }
+        @font-face {
+            font-family: 'NotoSansKR';
+            src: url('classpath:/fonts/NotoSansKR-Bold.ttf');
+            font-weight: bold;
+        }
+        body {
+            font-family: 'NotoSansKR', sans-serif;
+            margin: 0;
+            padding: 60px;
+            position: relative;
+            min-height: 297mm;
+            box-sizing: border-box;
+        }
+        h1 {
+            font-weight: bold;
+            text-align: center;
+            margin-top: 60px;
+        }
+        table.info-table {
+            width: 480px;
+            margin: 60px 0 0 160px;
+            border-collapse: collapse;
+        }
+        table.info-table td {
+            padding: 14px 0;
+            font-size: 18px;
+        }
+        table.info-table td.label {
+            width: 150px;
+            font-weight: bold;
+        }
+        .evidence-list {
+            width: 480px;
+            margin: 30px auto 0 auto;
+            padding-left: 20px;
+        }
+        .evidence-list li {
+            margin-bottom: 6px;
+        }
+        .confirm-text {
+            font-weight: bold;
+            font-size: 20px;
+            margin-top: 50px; /*70*/
+            text-align: center;
+        }
+        .issued-date {
+            font-weight: bold;
+            text-align: center;
+            margin-top: 55px;
+        }
+        .signature-block {
+            margin-top: 20px;
+            text-align: center;
+            position: relative;
+        }
+        .signature-name {
+            display: inline-block;
+            position: relative;
+            font-weight: bold;
+            font-size: 19px;
+        }
+        .stamp-anchor {
+            position: relative;
+            display: inline-block;
+        }
+
+        .signature-image {
+            position: absolute;
+            top: 50%;
+            left: 0;                                  /* right: 0 -> left: 0 */
+            transform: translateY(-50%);
+            width: 90px; /*72*/
+            filter: contrast(7.0) brightness(0.35);
+        }
+        .footer-logo {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 24px;
+            text-align: center;
+        }
+        .footer-logo img {
+            height: 18px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>동아리 활동 증명서</h1>
+
+<table class="info-table">
+    <tr>
+        <td class="label">학번</td>
+        <td th:text="${studentId}"></td>
+    </tr>
+    <tr>
+        <td class="label">성명</td>
+        <td th:text="${name}"></td>
+    </tr>
+    <tr>
+        <td class="label">소속학과</td>
+        <td th:text="${department}"></td>
+    </tr>
+    <tr>
+        <td class="label">소속동아리</td>
+        <td th:text="${clubName}"></td>
+    </tr>
+    <tr>
+        <td class="label">기수 / 역할</td>
+        <td>
+            <span th:text="${cohortName}"></span>
+            <span th:text="${activityType}"></span>
+            <span th:text="${part}"></span>
+        </td>
+    </tr>
+</table>
+
+<ul class="evidence-list" th:if="${evidenceList != null and !evidenceList.isEmpty()}">
+    <li th:each="item, iterStat : ${evidenceList}">
+        <span th:text="'[붙임 ' + (${iterStat.index} + 1) + '] ' + ${item}"></span>
+    </li>
+</ul>
+
+<p class="confirm-text">상기 내용이 사실임을 증명합니다.</p>
+
+<p class="issued-date"><span th:text="${issuedDate}"></span></p>
+
+<div class="signature-block">
+    <span class="signature-name">
+        멋쟁이사자처럼 수원대학교 대표 <span th:text="${representativeName}"></span>
+        <span class="stamp-anchor">(인)
+            <img class="signature-image" src="classpath:/images/signature.png" />
+        </span>
+    </span>
+</div>
+
+<div class="footer-logo">
+    <img src="classpath:/images/logo.png" />
+</div>
+
+</body>
+</html>

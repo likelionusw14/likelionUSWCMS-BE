@@ -14,6 +14,7 @@ import com.likelion.cms.global.exception.BusinessException;
 import com.likelion.cms.global.exception.ErrorCode;
 import com.likelion.cms.global.jwt.JwtTokenProvider;
 import jakarta.servlet.http.Cookie;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -105,27 +106,47 @@ class AuthControllerTest {
                 null, 0, LocalDateTime.now(), LocalDateTime.now());
         AccessTokenResponse body = AccessTokenResponse.of("jwt-value", "Bearer", 1800, account);
         ResponseCookie refreshCookie = ResponseCookie.from("refresh_session", "new-token").path("/api").build();
-        ResponseCookie csrfCookie = ResponseCookie.from("csrf_token", "new-csrf").path("/api").build();
+        ResponseCookie csrfCookie = ResponseCookie.from("csrf_token", "new-csrf").path("/").domain("usw-likelion.kr").build();
+        ResponseCookie legacyCsrfCleared = ResponseCookie.from("csrf_token", "").path("/api").maxAge(0).build();
         when(authService.reissueAccessToken("old-token"))
                 .thenReturn(new AuthService.ReissueResult(body, refreshCookie, csrfCookie));
+        when(authCookieFactory.legacyCsrfCookieCleared()).thenReturn(legacyCsrfCleared);
 
         mockMvc.perform(post("/api/auth/tokens")
                         .cookie(new Cookie("refresh_session", "old-token"), new Cookie("csrf_token", "csrf-1"))
                         .header("X-CSRF-Token", "csrf-1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").value("jwt-value"));
+                .andExpect(jsonPath("$.accessToken").value("jwt-value"))
+                .andExpect(header().stringValues("Set-Cookie", Matchers.hasItem(legacyCsrfClearedMatcher())));
     }
 
     @Test
     void logoutClearsSessionCookies() throws Exception {
+        ResponseCookie legacyCsrfCleared = ResponseCookie.from("csrf_token", "").path("/api").maxAge(0).build();
         when(authCookieFactory.clearRefreshSessionCookie())
                 .thenReturn(ResponseCookie.from("refresh_session", "").path("/api").maxAge(0).build());
         when(authCookieFactory.clearCsrfCookie())
-                .thenReturn(ResponseCookie.from("csrf_token", "").path("/api").maxAge(0).build());
+                .thenReturn(ResponseCookie.from("csrf_token", "").path("/").domain("usw-likelion.kr").maxAge(0).build());
+        when(authCookieFactory.legacyCsrfCookieCleared()).thenReturn(legacyCsrfCleared);
 
         mockMvc.perform(delete("/api/auth/session")
                         .cookie(new Cookie("refresh_session", "token"), new Cookie("csrf_token", "csrf-1"))
                         .header("X-CSRF-Token", "csrf-1"))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isNoContent())
+                .andExpect(header().stringValues("Set-Cookie", Matchers.hasItem(legacyCsrfClearedMatcher())));
+    }
+
+    /**
+     * ResponseCookie#toString() isn't safe to compare verbatim between two
+     * separately-computed instances (its auto-generated Expires text isn't
+     * guaranteed byte-identical run to run), so assert on the attributes
+     * that distinguish the legacy host-only /api cookie from the new
+     * Domain-scoped one instead of the full header string.
+     */
+    private static org.hamcrest.Matcher<String> legacyCsrfClearedMatcher() {
+        return Matchers.allOf(
+                Matchers.containsString("csrf_token=;"),
+                Matchers.containsString("Path=/api"),
+                Matchers.not(Matchers.containsString("Domain=")));
     }
 }
