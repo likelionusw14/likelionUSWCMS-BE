@@ -58,6 +58,7 @@ public class AuthController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, result.refreshCookie().toString())
                 .header(HttpHeaders.SET_COOKIE, result.csrfCookie().toString())
+                .header(HttpHeaders.SET_COOKIE, authCookieFactory.legacyCsrfCookieCleared().toString())
                 .body(result.body());
     }
 
@@ -71,6 +72,7 @@ public class AuthController {
         return ResponseEntity.noContent()
                 .header(HttpHeaders.SET_COOKIE, authCookieFactory.clearRefreshSessionCookie().toString())
                 .header(HttpHeaders.SET_COOKIE, authCookieFactory.clearCsrfCookie().toString())
+                .header(HttpHeaders.SET_COOKIE, authCookieFactory.legacyCsrfCookieCleared().toString())
                 .build();
     }
 }

@@ -130,14 +130,16 @@ public class AuthService {
             String refreshToken = refreshTokenStore.issue(existingUser.get().getUserId());
             List<ResponseCookie> cookies = List.of(
                     authCookieFactory.refreshSessionCookie(refreshToken),
-                    authCookieFactory.csrfCookieForRefresh(csrfToken));
+                    authCookieFactory.csrfCookieForRefresh(csrfToken),
+                    authCookieFactory.legacyCsrfCookieCleared());
             return new CallbackResult(callbackUri(origin, "status", "member"), cookies);
         }
 
         String onboardingSessionId = onboardingSessionStore.create(kakaoSubject);
         List<ResponseCookie> cookies = List.of(
                 authCookieFactory.onboardingSessionCookie(onboardingSessionId),
-                authCookieFactory.csrfCookieForOnboarding(csrfToken));
+                authCookieFactory.csrfCookieForOnboarding(csrfToken),
+                authCookieFactory.legacyCsrfCookieCleared());
         return new CallbackResult(callbackUri(origin, "status", "onboarding"), cookies);
     }
 
