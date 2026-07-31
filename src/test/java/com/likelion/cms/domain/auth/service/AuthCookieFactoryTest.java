@@ -43,4 +43,17 @@ class AuthCookieFactoryTest {
         assertThat(refresh.getPath()).isEqualTo("/api");
         assertThat(refresh.isHttpOnly()).isTrue();
     }
+
+    @Test
+    void legacyCsrfCookieClearedMatchesThePreDomainFixScopeExactly() {
+        ReflectionTestUtils.setField(factory, "csrfCookieDomain", "usw-likelion.kr");
+
+        ResponseCookie legacy = factory.legacyCsrfCookieCleared();
+
+        // Must match the old Set-Cookie's Domain+Path exactly (host-only,
+        // /api) or the browser won't recognize it as the same cookie to expire.
+        assertThat(legacy.getDomain()).isNull();
+        assertThat(legacy.getPath()).isEqualTo("/api");
+        assertThat(legacy.getMaxAge()).isZero();
+    }
 }

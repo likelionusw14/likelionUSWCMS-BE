@@ -60,6 +60,25 @@ public class AuthCookieFactory {
         return csrfCookie("", Duration.ZERO);
     }
 
+    /**
+     * Expires the pre-domain-fix csrf_token cookie (host-only, Path=/api)
+     * that may still be sitting in a client's browser from before this
+     * origin-wide cookie existed. Browsers treat cookies with the same name
+     * but different Domain/Path as distinct, so without this the old and
+     * new csrf_token would coexist and which one a same-named @CookieValue
+     * binds to would be unspecified. Must be sent alongside every place a
+     * new-style csrf cookie is issued or cleared.
+     */
+    public ResponseCookie legacyCsrfCookieCleared() {
+        return ResponseCookie.from(CSRF_COOKIE, "")
+                .httpOnly(false)
+                .secure(true)
+                .sameSite("Lax")
+                .path(COOKIE_PATH)
+                .maxAge(Duration.ZERO)
+                .build();
+    }
+
     private ResponseCookie sessionCookie(String name, String value, Duration maxAge, boolean httpOnly) {
         return ResponseCookie.from(name, value)
                 .httpOnly(httpOnly)
