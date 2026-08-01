@@ -5,6 +5,7 @@ import com.likelion.cms.domain.cohort.dto.response.CohortSummary;
 import com.likelion.cms.domain.cohort.entity.Cohort;
 import com.likelion.cms.domain.cohort.repository.CohortRepository;
 import com.likelion.cms.domain.project.dto.request.CreateProjectRequest;
+import com.likelion.cms.domain.project.dto.request.ProjectParticipantRequest;
 import com.likelion.cms.domain.project.dto.request.UpdateProjectRequest;
 import com.likelion.cms.domain.project.dto.response.AdminProjectResponse;
 import com.likelion.cms.domain.project.dto.response.ProjectParticipantResponse;
@@ -34,6 +35,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -145,12 +147,17 @@ public class ProjectService {
                 .deployUrl(request.deployUrl())
                 .githubUrl(request.githubUrl())
                 .cohort(cohort)
-                .startedMonth(request.startedMonth())
-                .endedMonth(request.endedMonth())
+                // 엔티티는 date 컬럼이라 "그 달의 1일"로 고정해서 저장한다.
+                .startedMonth(toFirstDayOfMonth(request.startedMonth()))
+                .endedMonth(toFirstDayOfMonth(request.endedMonth()))
                 .createdByUser(actor)
                 .build();
 
-        return AdminProjectResponse.from(projectRepository.save(project));
+        // 참여자는 projectId가 있어야 매핑할 수 있으므로 프로젝트 저장 이후에 넣는다.
+        Project saved = projectRepository.save(project);
+        List<ProjectParticipantResponse> participants = saveParticipants(saved, request.participants());
+
+        return AdminProjectResponse.from(saved, participants);
     }
 
     @Transactional
@@ -188,12 +195,12 @@ public class ProjectService {
             project.updateCohort(findCohort(request.getCohortId()));
         }
         if (request.isStartedMonthProvided()) {
-            project.updateStartedMonth(request.getStartedMonth());
+            project.updateStartedMonth(toFirstDayOfMonth(request.getStartedMonth()));
         }
         if (request.isEndedMonthProvided()) {
-            project.updateEndedMonth(request.getEndedMonth());
+            project.updateEndedMonth(toFirstDayOfMonth(request.getEndedMonth()));
         }
-        // 두 날짜 중 하나만 바뀌어도 "종료일 < 시작일"이 될 수 있어서,
+        // 두 값 중 하나만 바뀌어도 "종료월 < 시작월"이 될 수 있어서,
         // 모든 필드 반영이 끝난 "최종 상태" 기준으로 마지막에 한 번 더 검증.
         validateDateRange(project.getStartedMonth(), project.getEndedMonth());
 
@@ -201,7 +208,14 @@ public class ProjectService {
         // flush 없이 바로 응답을 만들면 version이 갱신 전 값으로 내려가서,
         // 클라이언트가 그 값으로 바로 다음 PATCH를 보내면 낙관적 락 충돌이 남.
         projectRepository.flush();
-        return AdminProjectResponse.from(project);
+
+        // participants를 보냈으면 기존 참여자를 전부 지우고 보낸 목록으로 교체,
+        // 안 보냈으면 기존 목록을 그대로 두고 응답에만 실어준다.
+        List<ProjectParticipantResponse> participants = request.isParticipantsProvided()
+                ? replaceParticipants(project, request.getParticipants())
+                : findParticipants(projectId);
+
+        return AdminProjectResponse.from(project, participants);
     }
 
     @Transactional
@@ -237,10 +251,61 @@ public class ProjectService {
         return fileAsset;
     }
 
+    private List<ProjectParticipantResponse> findParticipants(Long projectId) {
+        return projectParticipationRepository.findByProjectIdWithUser(projectId).stream()
+                .map(this::toParticipantResponse)
+                .toList();
+    }
+
+    // 기존 참여자를 전부 지우고 요청 목록으로 교체. 개별 추가/삭제 엔드포인트가 없어서
+    // PATCH로 보낸 목록이 곧 최종 상태가 된다.
+    private List<ProjectParticipantResponse> replaceParticipants(Project project,
+                                                                 List<ProjectParticipantRequest> requests) {
+        projectParticipationRepository.deleteByProjectId(project.getProjectId());
+        return saveParticipants(project, requests);
+    }
+
+    private List<ProjectParticipantResponse> saveParticipants(Project project,
+                                                              List<ProjectParticipantRequest> requests) {
+        if (requests.isEmpty()) {
+            return List.of();
+        }
+
+        // userId 하나당 findById를 돌리면 N+1이라 한 번에 가져와서 맵으로 조회한다.
+        // AppUser에는 @SQLRestriction("deletedAt IS NULL")이 걸려 있어서
+        // 탈퇴한 사용자는 여기서 안 잡히고 아래 404로 걸러진다.
+        List<Long> userIds = requests.stream().map(ProjectParticipantRequest::userId).toList();
+        Map<Long, AppUser> usersById = appUserRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(AppUser::getUserId, Function.identity()));
+
+        List<ProjectParticipation> participations = requests.stream()
+                .map(request -> {
+                    AppUser user = usersById.get(request.userId());
+                    if (user == null) {
+                        throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND,
+                                "존재하지 않는 사용자입니다. userId=" + request.userId());
+                    }
+                    return ProjectParticipation.builder()
+                            .project(project)
+                            .user(user)
+                            .role(request.role().trim())
+                            .build();
+                })
+                .toList();
+
+        return projectParticipationRepository.saveAll(participations).stream()
+                .map(this::toParticipantResponse)
+                .toList();
+    }
+
     private void validateVersion(Integer actualVersion, Integer requestedVersion) {
         if (!requestedVersion.equals(actualVersion)) {
             throw new BusinessException(ErrorCode.OPTIMISTIC_LOCK_CONFLICT);
         }
+    }
+
+    private LocalDate toFirstDayOfMonth(YearMonth month) {
+        return month.atDay(1);
     }
 
     private void validateDateRange(LocalDate startedMonth, LocalDate endedMonth) {

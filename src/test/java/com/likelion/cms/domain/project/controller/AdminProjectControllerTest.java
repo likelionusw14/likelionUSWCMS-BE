@@ -3,6 +3,7 @@ package com.likelion.cms.domain.project.controller;
 import com.likelion.cms.common.type.ProjectType;
 import com.likelion.cms.domain.cohort.dto.response.CohortSummary;
 import com.likelion.cms.domain.project.dto.response.AdminProjectResponse;
+import com.likelion.cms.domain.project.dto.response.ProjectParticipantResponse;
 import com.likelion.cms.domain.project.service.ProjectService;
 import com.likelion.cms.domain.user.entity.SystemRole;
 import com.likelion.cms.global.config.SecurityConfig;
@@ -67,13 +68,65 @@ class AdminProjectControllerTest {
                                   "description": "설명",
                                   "projectType": "HACKATHON",
                                   "cohortId": 5,
-                                  "startedMonth": "2026-01-01",
-                                  "endedMonth": "2026-06-01"
+                                  "participants": [{ "userId": 11, "role": "팀장" }],
+                                  "startedMonth": "2026-01",
+                                  "endedMonth": "2026-06"
                                 }
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "/api/projects/20"))
-                .andExpect(jsonPath("$.projectId").value(20));
+                .andExpect(jsonPath("$.projectId").value(20))
+                // 요청과 같은 yyyy-MM으로 내려가야 한다 (예전엔 요청만 yyyy-MM-dd라 왕복이 안 됐음)
+                .andExpect(jsonPath("$.startedMonth").value("2026-01"))
+                .andExpect(jsonPath("$.endedMonth").value("2026-06"))
+                .andExpect(jsonPath("$.participants[0].userId").value(11));
+    }
+
+    // participants는 스펙상 필수 필드 - 빠지면 등록 자체가 거부돼야 한다.
+    @Test
+    void createRejectsMissingParticipants() throws Exception {
+        mockMvc.perform(post("/api/admin/projects")
+                        .with(authentication(adminAuthentication()))
+                        .header("Idempotency-Key", IDEMPOTENCY_KEY)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "새 프로젝트",
+                                  "description": "설명",
+                                  "projectType": "HACKATHON",
+                                  "cohortId": 5,
+                                  "startedMonth": "2026-01",
+                                  "endedMonth": "2026-06"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("C001"));
+        verify(projectService, never()).create(any(), any());
+    }
+
+    @Test
+    void createRejectsDuplicateParticipantUserIds() throws Exception {
+        mockMvc.perform(post("/api/admin/projects")
+                        .with(authentication(adminAuthentication()))
+                        .header("Idempotency-Key", IDEMPOTENCY_KEY)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "새 프로젝트",
+                                  "description": "설명",
+                                  "projectType": "HACKATHON",
+                                  "cohortId": 5,
+                                  "participants": [
+                                    { "userId": 11, "role": "팀장" },
+                                    { "userId": 11, "role": "백엔드" }
+                                  ],
+                                  "startedMonth": "2026-01",
+                                  "endedMonth": "2026-06"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("C001"));
+        verify(projectService, never()).create(any(), any());
     }
 
     @Test
@@ -87,8 +140,9 @@ class AdminProjectControllerTest {
                                   "description": "설명",
                                   "projectType": "HACKATHON",
                                   "cohortId": 5,
-                                  "startedMonth": "2026-01-01",
-                                  "endedMonth": "2026-06-01"
+                                  "participants": [{ "userId": 11, "role": "팀장" }],
+                                  "startedMonth": "2026-01",
+                                  "endedMonth": "2026-06"
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
@@ -108,8 +162,9 @@ class AdminProjectControllerTest {
                                   "description": "설명",
                                   "projectType": "HACKATHON",
                                   "cohortId": 5,
-                                  "startedMonth": "2026-01-01",
-                                  "endedMonth": "2026-06-01"
+                                  "participants": [{ "userId": 11, "role": "팀장" }],
+                                  "startedMonth": "2026-01",
+                                  "endedMonth": "2026-06"
                                 }
                                 """))
                 .andExpect(status().isForbidden())
@@ -129,8 +184,9 @@ class AdminProjectControllerTest {
                                   "description": "설명",
                                   "projectType": "HACKATHON",
                                   "cohortId": 5,
-                                  "startedMonth": "2026-01-01",
-                                  "endedMonth": "2026-06-01",
+                                  "participants": [{ "userId": 11, "role": "팀장" }],
+                                  "startedMonth": "2026-01",
+                                  "endedMonth": "2026-06",
                                   "deployUrl": "javascript:alert(1)"
                                 }
                                 """))
@@ -183,6 +239,7 @@ class AdminProjectControllerTest {
         return AdminProjectResponse.of(
                 20L, "새 프로젝트", "설명", ProjectType.HACKATHON, null, "https://example.com", "https://github.com/example/repo",
                 CohortSummary.of(5L, 5, "5기"), YearMonth.of(2026, 1), YearMonth.of(2026, 6),
+                List.of(ProjectParticipantResponse.of(11L, "홍길동", "팀장")),
                 7L, 0, now, now
         );
     }

@@ -55,6 +55,9 @@ public class Project extends BaseTimeEntity {
     @JoinColumn(name = "cohortId", nullable = false)
     private Cohort cohort;
 
+    // 의미는 "월 단위"지만 컬럼 타입이 date라 엔티티는 LocalDate로 들고 있는다.
+    // 항상 해당 월의 1일로 저장하며(ProjectService에서 YearMonth.atDay(1)),
+    // 밖으로 나갈 때는 다시 YearMonth로 변환한다.
     @Column(nullable = false)
     private LocalDate startedMonth;
 
