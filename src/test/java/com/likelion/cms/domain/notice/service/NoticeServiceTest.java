@@ -113,6 +113,22 @@ class NoticeServiceTest {
     }
 
     @Test
+    void getIncludesImageWhenNoticeHasOne() {
+        AppUser actor = actor(1L);
+        FileAsset imageAsset = fileAsset(FilePurpose.NOTICE_IMAGE);
+        lenient().when(imageAsset.getFileAssetId()).thenReturn(42L);
+        Notice notice = notice(actor, imageAsset);
+        initializeEntity(notice, 30L, 0);
+
+        when(noticeRepository.findById(30L)).thenReturn(Optional.of(notice));
+
+        NoticeResponse response = noticeService.get(30L);
+
+        assertThat(response.getImage()).isNotNull();
+        assertThat(response.getImage().getFile().getFileAssetId()).isEqualTo(42L);
+    }
+
+    @Test
     void getRejectsMissingNotice() {
         when(noticeRepository.findById(99L)).thenReturn(Optional.empty());
 
