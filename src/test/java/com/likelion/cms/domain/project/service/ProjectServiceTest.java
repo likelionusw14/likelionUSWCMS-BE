@@ -17,6 +17,7 @@ import com.likelion.cms.global.exception.ErrorCode;
 import com.likelion.cms.support.file.entity.FileAsset;
 import com.likelion.cms.support.file.entity.FilePurpose;
 import com.likelion.cms.support.file.repository.FileAssetRepository;
+import com.likelion.cms.support.file.service.FileAssetService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -58,12 +59,15 @@ class ProjectServiceTest {
     @Mock
     private AppUserRepository appUserRepository;
 
+    @Mock
+    private FileAssetService fileAssetService;
+
     private ProjectService projectService;
 
     @BeforeEach
     void setUp() {
         projectService = new ProjectService(
-                projectRepository, projectParticipationRepository, cohortRepository, fileAssetRepository, appUserRepository);
+                projectRepository, projectParticipationRepository, cohortRepository, fileAssetRepository, appUserRepository, fileAssetService);
     }
 
     @Test
