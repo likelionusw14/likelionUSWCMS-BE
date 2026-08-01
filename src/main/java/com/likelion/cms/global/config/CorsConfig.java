@@ -20,7 +20,8 @@ public class CorsConfig implements WebMvcConfigurer {
                 "http://localhost:5173",
                 "https://develop.likelion-usw-cms-fe.pages.dev",
                 "https://likelion-usw-cms-fe.pages.dev",
-                "https://usw-likelion.kr"
+                "https://usw-likelion.kr",
+                "https://dev.usw-likelion.kr"
         ));
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
