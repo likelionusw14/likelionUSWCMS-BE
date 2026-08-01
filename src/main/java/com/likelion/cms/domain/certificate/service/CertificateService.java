@@ -127,6 +127,7 @@ public class CertificateService {
                         .cohort(cohort)
                         .fileAsset(fileAsset)
                         .issueStatus(CertificateIssueStatus.ISSUED)
+                        .idempotencyKey(idempotencyKey)
                         .nameSnapshot(user.getName())
                         .departmentSnapshot(user.getDepartment())
                         .studentIdSnapshot(user.getStudentId())
