@@ -37,6 +37,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import com.likelion.cms.support.file.service.FileAssetService;
+import com.likelion.cms.support.file.storage.FileStorage;
 
 @Service
 @RequiredArgsConstructor
@@ -48,6 +50,7 @@ public class ProjectService {
     private final CohortRepository cohortRepository;
     private final FileAssetRepository fileAssetRepository;
     private final AppUserRepository appUserRepository;
+    private final FileAssetService fileAssetService;
 
     // ===== 여기부터 일반 조회 API (#3/#36, 다른 PR에서 구현) =====
 
@@ -120,8 +123,8 @@ public class ProjectService {
         if (thumbnailAsset == null) {
             return null;
         }
-        // presign 인프라가 아직 없어 downloadUrl/expiresAt은 비워둠
-        return FileView.of(FileAssetResponse.from(thumbnailAsset), null, null);
+        FileStorage.PresignedDownload presigned = fileAssetService.createDownloadUrl(thumbnailAsset.getObjectKey());
+        return FileView.of(FileAssetResponse.from(thumbnailAsset), presigned.downloadUrl(), presigned.expiresAt());
     }
 
     private PageMeta toPageMeta(Page<?> page) {
