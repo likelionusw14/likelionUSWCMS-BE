@@ -3,17 +3,21 @@ package com.likelion.cms.domain.project.dto.request;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.likelion.cms.common.type.ProjectType;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.List;
 
 // PATCH 부분 수정 요청. UpdateAccountRequest와 동일한 xxxProvided 패턴 -
 // "필드를 안 보냄(유지)"과 "null로 보냄(제거)"을 구분하기 위해 @JsonSetter를 직접 씀.
 // projectType은 CreateProjectRequest와 같은 이유로 String이 아니라 ProjectType enum.
+// startedMonth/endedMonth도 CreateProjectRequest와 같은 이유로 스펙(yyyy-MM)에 맞춰
+// YearMonth로 받는다.
 @Getter
 @NoArgsConstructor
 public class UpdateProjectRequest {
@@ -29,8 +33,13 @@ public class UpdateProjectRequest {
     private String deployUrl;
     private String githubUrl;
     private Long cohortId;
-    private LocalDate startedMonth;
-    private LocalDate endedMonth;
+    private YearMonth startedMonth;
+    private YearMonth endedMonth;
+
+    // 참여자는 부분 병합이 아니라 "보낸 목록으로 통째로 교체"(전체 대체) 방식이다.
+    // 개별 참여자 추가/삭제 엔드포인트가 스펙에 없어서, 목록을 보내면 그게 최종 상태가 된다.
+    @Valid
+    private List<ProjectParticipantRequest> participants;
 
     @JsonIgnore
     private boolean titleProvided;
@@ -50,6 +59,8 @@ public class UpdateProjectRequest {
     private boolean startedMonthProvided;
     @JsonIgnore
     private boolean endedMonthProvided;
+    @JsonIgnore
+    private boolean participantsProvided;
 
     @JsonSetter
     public void setVersion(Integer version) {
@@ -102,22 +113,28 @@ public class UpdateProjectRequest {
     }
 
     @JsonSetter
-    public void setStartedMonth(LocalDate startedMonth) {
+    public void setStartedMonth(YearMonth startedMonth) {
         this.startedMonthProvided = true;
         this.startedMonth = startedMonth;
     }
 
     @JsonSetter
-    public void setEndedMonth(LocalDate endedMonth) {
+    public void setEndedMonth(YearMonth endedMonth) {
         this.endedMonthProvided = true;
         this.endedMonth = endedMonth;
+    }
+
+    @JsonSetter
+    public void setParticipants(List<ProjectParticipantRequest> participants) {
+        this.participantsProvided = true;
+        this.participants = participants;
     }
 
     @AssertTrue(message = "version 외에 하나 이상의 수정 필드가 필요합니다.")
     public boolean isAnyChangeProvided() {
         return titleProvided || descriptionProvided || projectTypeProvided || thumbnailAssetIdProvided
                 || deployUrlProvided || githubUrlProvided || cohortIdProvided
-                || startedMonthProvided || endedMonthProvided;
+                || startedMonthProvided || endedMonthProvided || participantsProvided;
     }
 
     @AssertTrue(message = "수정 필드의 값이 올바르지 않습니다.")
@@ -137,8 +154,16 @@ public class UpdateProjectRequest {
                 || (cohortId != null && cohortId > 0);
         boolean validStartedMonth = !startedMonthProvided || startedMonth != null;
         boolean validEndedMonth = !endedMonthProvided || endedMonth != null;
+        // participants는 null로 지울 수 없다 - 참여자를 비우려면 빈 배열([])을 보낸다.
+        boolean validParticipants = !participantsProvided || participants != null;
         return validTitle && validDescription && validProjectType && validThumbnailAssetId
-                && validDeployUrl && validGithubUrl && validCohortId && validStartedMonth && validEndedMonth;
+                && validDeployUrl && validGithubUrl && validCohortId
+                && validStartedMonth && validEndedMonth && validParticipants;
+    }
+
+    @AssertTrue(message = "participants의 userId는 중복될 수 없습니다.")
+    public boolean isParticipantsUnique() {
+        return !participantsProvided || CreateProjectRequest.hasUniqueUserIds(participants);
     }
 
     @AssertTrue(message = "deployUrl은 http 또는 https URL이어야 합니다.")
