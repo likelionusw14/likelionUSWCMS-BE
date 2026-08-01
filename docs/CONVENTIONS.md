@@ -81,6 +81,11 @@ public static LearningResourceResponse from(LearningResource resource) {
 엔티티 컬럼 타입과 다를 수 있다. `Project.startedMonth` 는 `LocalDate` 이므로 DTO 매핑
 시 `YearMonth.from(...)` 으로 변환한다. 이 변환은 `from(entity)` 안에서 처리한다.
 
+**요청 DTO도 응답과 같은 타입을 써야 한다.** 프로젝트 기간은 응답만 `YearMonth` 이고
+요청은 `LocalDate` 여서, 조회한 `"2026-01"` 을 그대로 등록/수정에 넣으면 역직렬화 단계에서
+400 이 났다. 지금은 양쪽 다 `YearMonth` 이고, 엔티티(`date` 컬럼)로 저장할 때만
+서비스에서 `atDay(1)` 로 그 달 1일에 맞춘다.
+
 > 참고: 저장되는 시각은 서버(컨테이너)의 JVM 기본 타임존을 따른다. 이 값이 UTC 이면
 > KST 와 9시간 어긋나므로, `Dockerfile` 에서 `TZ=Asia/Seoul` 과
 > `-Duser.timezone=Asia/Seoul` 로 KST 를 고정한다. 새 실행 환경을 추가할 때도 같은
