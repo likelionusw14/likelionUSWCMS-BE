@@ -20,6 +20,7 @@ import com.likelion.cms.support.file.service.FileAssetService;
 import com.likelion.cms.support.file.storage.FileStorage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -63,8 +64,11 @@ public class CertificateService {
         return DownloadUrlResponse.of(download.downloadUrl(), download.expiresAt());
     }
 
-    // 🟠 더 이상 전체를 @Transactional로 감싸지 않습니다.
-    // 쓰기(entity save)는 아래 createCertificate 내부의 transactionTemplate 블록에서만 짧게 처리됩니다.
+    // 🔴 클래스 레벨 @Transactional(readOnly = true)를 물려받으면 이 메서드 안에서 호출되는
+    // fileAssetService.uploadPdf(...) 같은 쓰기 작업이 읽기 전용 트랜잭션에 갇혀 실패한다.
+    // NOT_SUPPORTED로 트랜잭션 자체를 비활성화하고, 실제 DB 쓰기는 아래
+    // transactionTemplate.execute(...) 블록에서 별도 트랜잭션으로 처리한다.
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public CertificateResponse issueCertificate(Long userId, UUID idempotencyKey) {
         return idempotencyStore.find(userId, idempotencyKey)
                 .map(record -> handleExistingRecord(record, userId))
