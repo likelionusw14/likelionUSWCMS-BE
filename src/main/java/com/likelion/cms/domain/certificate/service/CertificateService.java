@@ -104,9 +104,15 @@ public class CertificateService {
             AppUser user = appUserRepository.findById(userId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
 
-            // 🟠 3) user.getCohort()는 지연 로딩(LAZY)이라 트랜잭션이 없는 상태에서 호출하면
-            // LazyInitializationException이 날 수 있다. cohortId 조회 자체를 짧은 트랜잭션 안에서 수행한다.
-            Long cohortId = transactionTemplate.execute(status -> user.getCohort().getCohortId());
+            // 🟠 3) user.getCohort()는 지연 로딩(LAZY)인데, issueCertificate 초반에 조회한 user는
+            // NOT_SUPPORTED 트랜잭션(즉 트랜잭션 없음) 하에서 가져온 detached 상태다.
+            // transactionTemplate이 만드는 REQUIRES_NEW 트랜잭션은 별도의 영속성 컨텍스트를 가지므로,
+            // 그 안에서 user를 다시 조회(managed 상태로)한 뒤에 cohort를 지연 로딩해야 한다.
+            Long cohortId = transactionTemplate.execute(status -> {
+                AppUser managedUser = appUserRepository.findById(userId)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+                return managedUser.getCohort().getCohortId();
+            });
 
             Cohort cohort = cohortRepository.findById(cohortId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
@@ -134,7 +140,13 @@ public class CertificateService {
             //  - CertificateResponse.from(...)도 트랜잭션이 살아있는 동안 실행해 cohort 등
             //    지연 로딩 필드에 안전하게 접근한다.
             //  전파 설정은 TransactionConfig의 transactionTemplate 빈 참고.
-            CertificateResponse response = transactionTemplate.execute(status -> {
+            // 🟠 4) idempotencyStore.complete(...)는 DB 커밋이 실제로 끝난 뒤에 호출해야 한다.
+            // execute(...) 블록 안에서 호출하면 커밋 전에 Redis가 COMPLETED로 표시되어,
+            // 커밋이 실패할 경우 Redis만 완료 상태로 남는 불일치가 생긴다.
+            // 따라서 save까지만 트랜잭션 안에서 수행하고, execute()가 반환된(=커밋된) 이후에
+            // complete()를 호출한다. cohort는 빌더에서 직접 설정한 참조라 지연 로딩 문제가 없어
+            // CertificateResponse.from(saved)는 트랜잭션 밖에서 호출해도 안전하다.
+            ActivityCertificate saved = transactionTemplate.execute(status -> {
                 ActivityCertificate certificate = ActivityCertificate.builder()
                         .user(user)
                         .cohort(cohort)
@@ -149,12 +161,12 @@ public class CertificateService {
                         .activityEndedAt(cohort.getEndedAt())
                         .issuedAt(issuedAt)
                         .build();
-                ActivityCertificate saved = activityCertificateRepository.save(certificate);
-                idempotencyStore.complete(userId, idempotencyKey, saved.getCertificateId());
-                return CertificateResponse.from(saved);
+                return activityCertificateRepository.save(certificate);
             });
 
-            return response;
+            idempotencyStore.complete(userId, idempotencyKey, saved.getCertificateId());
+
+            return CertificateResponse.from(saved);
         } catch (RuntimeException exception) {
             idempotencyStore.clearPending(userId, idempotencyKey);
             throw exception;
