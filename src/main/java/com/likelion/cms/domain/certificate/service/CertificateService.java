@@ -79,9 +79,13 @@ public class CertificateService {
         if (record.status() == CertificateIdempotencyRecord.Status.PENDING) {
             throw new BusinessException(ErrorCode.CONFLICT);
         }
-        ActivityCertificate certificate = activityCertificateRepository.findById(record.certificateId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
-        return CertificateResponse.from(certificate);
+        // 🟠 지연 로딩(cohort 등)을 트랜잭션이 살아있는 동안 안전하게 매핑하기 위해
+        // 조회부터 응답 생성까지 짧은 트랜잭션 안에서 처리한다.
+        return transactionTemplate.execute(status -> {
+            ActivityCertificate certificate = activityCertificateRepository.findById(record.certificateId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+            return CertificateResponse.from(certificate);
+        });
     }
 
     private CertificateResponse reserveAndCreate(Long userId, UUID idempotencyKey) {
@@ -100,7 +104,11 @@ public class CertificateService {
             AppUser user = appUserRepository.findById(userId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
 
-            Cohort cohort = cohortRepository.findById(user.getCohort().getCohortId())
+            // 🟠 3) user.getCohort()는 지연 로딩(LAZY)이라 트랜잭션이 없는 상태에서 호출하면
+            // LazyInitializationException이 날 수 있다. cohortId 조회 자체를 짧은 트랜잭션 안에서 수행한다.
+            Long cohortId = transactionTemplate.execute(status -> user.getCohort().getCohortId());
+
+            Cohort cohort = cohortRepository.findById(cohortId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
 
             LocalDateTime issuedAt = LocalDateTime.now();
@@ -121,11 +129,12 @@ public class CertificateService {
             String fileName = "활동증명서_" + user.getName() + ".pdf";
             FileAsset fileAsset = fileAssetService.uploadPdf(pdfBytes, fileName, userId);
 
-            // 🟠 2) DB save만 짧은 독립 트랜잭션(REQUIRES_NEW)으로 감싼다.
+            // 🟠 2) DB save + 응답 매핑까지 짧은 독립 트랜잭션(REQUIRES_NEW)으로 감싼다.
             //  - issueCertificate를 감싼 클래스 레벨 readOnly 트랜잭션과 분리해 쓰기를 수행하고,
-            //  - execute()가 반환되는 시점에 이 쓰기가 실제로 커밋된다(아래 complete() 호출 전).
+            //  - CertificateResponse.from(...)도 트랜잭션이 살아있는 동안 실행해 cohort 등
+            //    지연 로딩 필드에 안전하게 접근한다.
             //  전파 설정은 TransactionConfig의 transactionTemplate 빈 참고.
-            ActivityCertificate saved = transactionTemplate.execute(status -> {
+            CertificateResponse response = transactionTemplate.execute(status -> {
                 ActivityCertificate certificate = ActivityCertificate.builder()
                         .user(user)
                         .cohort(cohort)
@@ -140,13 +149,12 @@ public class CertificateService {
                         .activityEndedAt(cohort.getEndedAt())
                         .issuedAt(issuedAt)
                         .build();
-                return activityCertificateRepository.save(certificate);
+                ActivityCertificate saved = activityCertificateRepository.save(certificate);
+                idempotencyStore.complete(userId, idempotencyKey, saved.getCertificateId());
+                return CertificateResponse.from(saved);
             });
 
-            // DB save가 성공적으로 커밋된 뒤에만 Redis를 COMPLETED로 표시
-            idempotencyStore.complete(userId, idempotencyKey, saved.getCertificateId());
-
-            return CertificateResponse.from(saved);
+            return response;
         } catch (RuntimeException exception) {
             idempotencyStore.clearPending(userId, idempotencyKey);
             throw exception;
