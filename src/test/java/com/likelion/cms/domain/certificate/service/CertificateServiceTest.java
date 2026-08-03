@@ -232,6 +232,10 @@ class CertificateServiceTest {
         when(idempotencyStore.find(1L, idempotencyKey))
                 .thenReturn(Optional.of(CertificateIdempotencyRecord.completed(10L)));
         when(activityCertificateRepository.findById(10L)).thenReturn(Optional.of(existingCertificate));
+        when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
+            org.springframework.transaction.support.TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(null);
+        });
 
         CertificateResponse response = certificateService.issueCertificate(1L, idempotencyKey);
 

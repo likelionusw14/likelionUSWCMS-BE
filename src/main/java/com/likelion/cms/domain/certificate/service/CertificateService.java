@@ -20,6 +20,7 @@ import com.likelion.cms.support.file.service.FileAssetService;
 import com.likelion.cms.support.file.storage.FileStorage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -63,8 +64,11 @@ public class CertificateService {
         return DownloadUrlResponse.of(download.downloadUrl(), download.expiresAt());
     }
 
-    // 🟠 더 이상 전체를 @Transactional로 감싸지 않습니다.
-    // 쓰기(entity save)는 아래 createCertificate 내부의 transactionTemplate 블록에서만 짧게 처리됩니다.
+    // 🔴 클래스 레벨 @Transactional(readOnly = true)를 물려받으면 이 메서드 안에서 호출되는
+    // fileAssetService.uploadPdf(...) 같은 쓰기 작업이 읽기 전용 트랜잭션에 갇혀 실패한다.
+    // NOT_SUPPORTED로 트랜잭션 자체를 비활성화하고, 실제 DB 쓰기는 아래
+    // transactionTemplate.execute(...) 블록에서 별도 트랜잭션으로 처리한다.
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public CertificateResponse issueCertificate(Long userId, UUID idempotencyKey) {
         return idempotencyStore.find(userId, idempotencyKey)
                 .map(record -> handleExistingRecord(record, userId))
@@ -75,9 +79,13 @@ public class CertificateService {
         if (record.status() == CertificateIdempotencyRecord.Status.PENDING) {
             throw new BusinessException(ErrorCode.CONFLICT);
         }
-        ActivityCertificate certificate = activityCertificateRepository.findById(record.certificateId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
-        return CertificateResponse.from(certificate);
+        // 🟠 지연 로딩(cohort 등)을 트랜잭션이 살아있는 동안 안전하게 매핑하기 위해
+        // 조회부터 응답 생성까지 짧은 트랜잭션 안에서 처리한다.
+        return transactionTemplate.execute(status -> {
+            ActivityCertificate certificate = activityCertificateRepository.findById(record.certificateId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+            return CertificateResponse.from(certificate);
+        });
     }
 
     private CertificateResponse reserveAndCreate(Long userId, UUID idempotencyKey) {
@@ -96,7 +104,17 @@ public class CertificateService {
             AppUser user = appUserRepository.findById(userId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
 
-            Cohort cohort = cohortRepository.findById(user.getCohort().getCohortId())
+            // 🟠 3) user.getCohort()는 지연 로딩(LAZY)인데, issueCertificate 초반에 조회한 user는
+            // NOT_SUPPORTED 트랜잭션(즉 트랜잭션 없음) 하에서 가져온 detached 상태다.
+            // transactionTemplate이 만드는 REQUIRES_NEW 트랜잭션은 별도의 영속성 컨텍스트를 가지므로,
+            // 그 안에서 user를 다시 조회(managed 상태로)한 뒤에 cohort를 지연 로딩해야 한다.
+            Long cohortId = transactionTemplate.execute(status -> {
+                AppUser managedUser = appUserRepository.findById(userId)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+                return managedUser.getCohort().getCohortId();
+            });
+
+            Cohort cohort = cohortRepository.findById(cohortId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
 
             LocalDateTime issuedAt = LocalDateTime.now();
@@ -117,10 +135,17 @@ public class CertificateService {
             String fileName = "활동증명서_" + user.getName() + ".pdf";
             FileAsset fileAsset = fileAssetService.uploadPdf(pdfBytes, fileName, userId);
 
-            // 🟠 2) DB save만 짧은 독립 트랜잭션(REQUIRES_NEW)으로 감싼다.
+            // 🟠 2) DB save + 응답 매핑까지 짧은 독립 트랜잭션(REQUIRES_NEW)으로 감싼다.
             //  - issueCertificate를 감싼 클래스 레벨 readOnly 트랜잭션과 분리해 쓰기를 수행하고,
-            //  - execute()가 반환되는 시점에 이 쓰기가 실제로 커밋된다(아래 complete() 호출 전).
+            //  - CertificateResponse.from(...)도 트랜잭션이 살아있는 동안 실행해 cohort 등
+            //    지연 로딩 필드에 안전하게 접근한다.
             //  전파 설정은 TransactionConfig의 transactionTemplate 빈 참고.
+            // 🟠 4) idempotencyStore.complete(...)는 DB 커밋이 실제로 끝난 뒤에 호출해야 한다.
+            // execute(...) 블록 안에서 호출하면 커밋 전에 Redis가 COMPLETED로 표시되어,
+            // 커밋이 실패할 경우 Redis만 완료 상태로 남는 불일치가 생긴다.
+            // 따라서 save까지만 트랜잭션 안에서 수행하고, execute()가 반환된(=커밋된) 이후에
+            // complete()를 호출한다. cohort는 빌더에서 직접 설정한 참조라 지연 로딩 문제가 없어
+            // CertificateResponse.from(saved)는 트랜잭션 밖에서 호출해도 안전하다.
             ActivityCertificate saved = transactionTemplate.execute(status -> {
                 ActivityCertificate certificate = ActivityCertificate.builder()
                         .user(user)
@@ -139,7 +164,6 @@ public class CertificateService {
                 return activityCertificateRepository.save(certificate);
             });
 
-            // DB save가 성공적으로 커밋된 뒤에만 Redis를 COMPLETED로 표시
             idempotencyStore.complete(userId, idempotencyKey, saved.getCertificateId());
 
             return CertificateResponse.from(saved);
