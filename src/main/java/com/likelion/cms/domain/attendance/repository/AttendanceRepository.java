@@ -1,6 +1,7 @@
 package com.likelion.cms.domain.attendance.repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -8,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -44,4 +46,24 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
             ORDER BY a.attendanceDate DESC, a.attendanceId DESC
             """)
     Page<Attendance> findAllByUserId(@Param("userId") Long userId, Pageable pageable);
+
+
+    @Query("SELECT DISTINCT a.attendanceDate FROM Attendance a WHERE a.status = :status")
+    List<LocalDate> findDistinctAttendanceDatesByStatus(@Param("status") AttendanceStatus status);
+
+    @Modifying
+    @Query("""
+            UPDATE Attendance a
+            SET a.status = :newStatus,
+                a.version = a.version + 1,
+                a.updatedAt = :now
+            WHERE a.attendanceDate = :attendanceDate
+              AND a.status = :oldStatus
+            """)
+    int bulkUpdateStatus(
+            @Param("attendanceDate") LocalDate attendanceDate,
+            @Param("oldStatus") AttendanceStatus oldStatus,
+            @Param("newStatus") AttendanceStatus newStatus,
+            @Param("now") LocalDateTime now
+    );
 }
