@@ -40,7 +40,6 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     Optional<Attendance> findByUser_UserIdAndAttendanceDate(Long userId, LocalDate attendanceDate);
 
-
     @Query("""
             SELECT a FROM Attendance a
             WHERE a.user.userId = :userId
@@ -48,16 +47,23 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
             """)
     Page<Attendance> findAllByUserId(@Param("userId") Long userId, Pageable pageable);
 
+
+    @Query("SELECT DISTINCT a.attendanceDate FROM Attendance a WHERE a.status = :status")
+    List<LocalDate> findDistinctAttendanceDatesByStatus(@Param("status") AttendanceStatus status);
+
     @Modifying
     @Query("""
             UPDATE Attendance a
-            SET a.status = :newStatus
-            WHERE a.status = :oldStatus
-              AND a.createdAt <= :cutoff
+            SET a.status = :newStatus,
+                a.version = a.version + 1,
+                a.updatedAt = :now
+            WHERE a.attendanceDate = :attendanceDate
+              AND a.status = :oldStatus
             """)
-    int bulkUpdateExpiredStatus(
+    int bulkUpdateStatus(
+            @Param("attendanceDate") LocalDate attendanceDate,
             @Param("oldStatus") AttendanceStatus oldStatus,
             @Param("newStatus") AttendanceStatus newStatus,
-            @Param("cutoff") LocalDateTime cutoff
+            @Param("now") LocalDateTime now
     );
 }
