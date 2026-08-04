@@ -2,6 +2,7 @@ package com.likelion.cms.domain.attendance.service;
 
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -24,24 +25,24 @@ public class AttendanceCodeService {
     private final ObjectMapper objectMapper;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public AttendanceCodeCacheValue issue(Long scheduleId) {
+    public AttendanceCodeCacheValue issue(LocalDate attendanceDate) {
         String code = generateSixDigitCode();
         AttendanceCodeCacheValue value = new AttendanceCodeCacheValue(code, LocalDateTime.now());
 
-        redisTemplate.opsForValue().set(key(scheduleId), serialize(value), CODE_TTL);
+        redisTemplate.opsForValue().set(key(attendanceDate), serialize(value), CODE_TTL);
         return value;
     }
 
-    public Optional<AttendanceCodeCacheValue> getCurrent(Long scheduleId) {
-        String json = redisTemplate.opsForValue().get(key(scheduleId));
+    public Optional<AttendanceCodeCacheValue> getCurrent(LocalDate attendanceDate) {
+        String json = redisTemplate.opsForValue().get(key(attendanceDate));
         if (json == null) {
             return Optional.empty();
         }
         return Optional.of(deserialize(json));
     }
 
-    public boolean matches(Long scheduleId, String inputCode) {
-        return getCurrent(scheduleId)
+    public boolean matches(LocalDate attendanceDate, String inputCode) {
+        return getCurrent(attendanceDate)
                 .map(v -> v.code().equals(inputCode))
                 .orElse(false);
     }
@@ -51,8 +52,8 @@ public class AttendanceCodeService {
         return String.format("%06d", number);
     }
 
-    private String key(Long scheduleId) {
-        return KEY_PREFIX + scheduleId;
+    private String key(LocalDate attendanceDate) {
+        return KEY_PREFIX + attendanceDate;
     }
 
     private String serialize(AttendanceCodeCacheValue value) {

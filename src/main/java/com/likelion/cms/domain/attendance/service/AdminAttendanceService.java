@@ -1,5 +1,6 @@
 package com.likelion.cms.domain.attendance.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -15,8 +16,6 @@ import com.likelion.cms.domain.attendance.dto.response.AttendanceResponse;
 import com.likelion.cms.domain.attendance.entity.Attendance;
 import com.likelion.cms.domain.attendance.entity.AttendanceStatus;
 import com.likelion.cms.domain.attendance.repository.AttendanceRepository;
-import com.likelion.cms.domain.schedule.entity.Schedule;
-import com.likelion.cms.domain.schedule.repository.ScheduleRepository;
 import com.likelion.cms.domain.user.entity.AccountStatus;
 import com.likelion.cms.domain.user.entity.AppUser;
 import com.likelion.cms.domain.user.entity.SystemRole;
@@ -34,18 +33,15 @@ import lombok.RequiredArgsConstructor;
 public class AdminAttendanceService {
 
     private final AttendanceRepository attendanceRepository;
-    private final ScheduleRepository scheduleRepository;
     private final AppUserRepository appUserRepository;
     private final AttendanceCodeService attendanceCodeService;
 
     @Transactional(readOnly = true)
     public PageResponse<AttendanceResponse> listAttendances(
-            Long scheduleId, PartType part, Long userId, AttendanceStatus status, Pageable pageable) {
+            LocalDate attendanceDate, PartType part, Long userId, AttendanceStatus status, Pageable pageable) {
 
-        scheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
-
-        Page<Attendance> result = attendanceRepository.searchForAdmin(scheduleId, part, userId, status, pageable);
+        Page<Attendance> result =
+                attendanceRepository.searchForAdmin(attendanceDate, part, userId, status, pageable);
 
         return PageResponse.of(
                 result.getContent().stream()
@@ -82,38 +78,31 @@ public class AdminAttendanceService {
         return AttendanceResponse.from(attendance);
     }
 
-    public AttendanceCodeResponse createOrReissueCode(Long scheduleId, Long actorUserId) {
-        Schedule schedule = scheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+    public AttendanceCodeResponse createOrReissueCode(LocalDate attendanceDate, Long actorUserId) {
+        ensureAttendanceRowsExist(attendanceDate);
 
-        ensureAttendanceRowsExist(schedule);
-
-        AttendanceCodeCacheValue value = attendanceCodeService.issue(scheduleId);
-        return toResponse(scheduleId, value);
+        AttendanceCodeCacheValue value = attendanceCodeService.issue(attendanceDate);
+        return toResponse(attendanceDate, value);
     }
 
     @Transactional(readOnly = true)
-    public AttendanceCodeResponse getCurrentCode(Long scheduleId) {
-        scheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
-
-        return attendanceCodeService.getCurrent(scheduleId)
-                .map(value -> toResponse(scheduleId, value))
+    public AttendanceCodeResponse getCurrentCode(LocalDate attendanceDate) {
+        return attendanceCodeService.getCurrent(attendanceDate)
+                .map(value -> toResponse(attendanceDate, value))
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
     }
 
-    private void ensureAttendanceRowsExist(Schedule schedule) {
+    private void ensureAttendanceRowsExist(LocalDate attendanceDate) {
+        List<AppUser> targets = appUserRepository.findAllBySystemRoleAndAccountStatus(
+                SystemRole.MEMBER, AccountStatus.ACTIVE);
 
-        List<AppUser> targets = appUserRepository.findAllByCohort_CohortIdAndSystemRoleAndAccountStatus(
-                schedule.getCohort().getCohortId(), SystemRole.MEMBER, AccountStatus.ACTIVE);
-
-        List<Long> existingUserIds = attendanceRepository.findUserIdsByScheduleId(schedule.getScheduleId());
+        List<Long> existingUserIds = attendanceRepository.findUserIdsByAttendanceDate(attendanceDate);
 
         List<Attendance> toCreate = targets.stream()
                 .filter(user -> !existingUserIds.contains(user.getUserId()))
                 .map(user -> Attendance.builder()
                         .user(user)
-                        .schedule(schedule)
+                        .attendanceDate(attendanceDate)
                         .build())
                 .toList();
 
@@ -122,8 +111,8 @@ public class AdminAttendanceService {
         }
     }
 
-    private AttendanceCodeResponse toResponse(Long scheduleId, AttendanceCodeCacheValue value) {
+    private AttendanceCodeResponse toResponse(LocalDate attendanceDate, AttendanceCodeCacheValue value) {
         LocalDateTime expiresAt = value.startedAt().plusSeconds(300);
-        return AttendanceCodeResponse.of(scheduleId, value.code(), value.startedAt(), expiresAt);
+        return AttendanceCodeResponse.of(attendanceDate, value.code(), value.startedAt(), expiresAt);
     }
 }
