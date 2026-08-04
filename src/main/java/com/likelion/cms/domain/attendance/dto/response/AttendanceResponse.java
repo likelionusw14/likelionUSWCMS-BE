@@ -22,9 +22,7 @@ public class AttendanceResponse {
     private final Long userId;
     private final String userName;
     private final PartType part;
-    private final Long scheduleId;
-    private final String scheduleTitle;
-    private final LocalDate scheduleDate;
+    private final LocalDate attendanceDate;
     private final AttendanceStatus status;
     private final LocalDateTime checkedAt;
     private final CheckInSource checkInSource;
@@ -34,12 +32,11 @@ public class AttendanceResponse {
     private final LocalDateTime updatedAt;
 
     public static AttendanceResponse of(Long attendanceId, Long userId, String userName, PartType part,
-                                        Long scheduleId, String scheduleTitle, LocalDate scheduleDate,
-                                        AttendanceStatus status, LocalDateTime checkedAt,
-                                        CheckInSource checkInSource, String memo, Integer version,
-                                        LocalDateTime createdAt, LocalDateTime updatedAt) {
-        return new AttendanceResponse(attendanceId, userId, userName, part, scheduleId, scheduleTitle,
-                scheduleDate, status, checkedAt, checkInSource, memo, version, createdAt, updatedAt);
+                                        LocalDate attendanceDate, AttendanceStatus status,
+                                        LocalDateTime checkedAt, CheckInSource checkInSource, String memo,
+                                        Integer version, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        return new AttendanceResponse(attendanceId, userId, userName, part, attendanceDate, status,
+                checkedAt, checkInSource, memo, version, createdAt, updatedAt);
     }
 
     public static AttendanceResponse from(Attendance attendance) {
@@ -48,9 +45,7 @@ public class AttendanceResponse {
                 attendance.getUser().getUserId(),
                 attendance.getUser().getName(),
                 attendance.getUser().getPart(),
-                attendance.getSchedule().getScheduleId(),
-                attendance.getSchedule().getTitle(),
-                attendance.getSchedule().getScheduleDate(),
+                attendance.getAttendanceDate(),
                 attendance.getStatus(),
                 attendance.getCheckedAt(),
                 attendance.getCheckInSource(),

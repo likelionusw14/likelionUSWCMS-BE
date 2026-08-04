@@ -1,5 +1,6 @@
 package com.likelion.cms.domain.attendance.dto.response;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -13,13 +14,13 @@ import lombok.Getter;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class AttendanceCodeResponse {
 
-    private final Long scheduleId;
+    private final LocalDate attendanceDate;
     private final String code;
     private final LocalDateTime startedAt;
     private final LocalDateTime expiresAt;
 
-    public static AttendanceCodeResponse of(Long scheduleId, String code,
+    public static AttendanceCodeResponse of(LocalDate attendanceDate, String code,
                                             LocalDateTime startedAt, LocalDateTime expiresAt) {
-        return new AttendanceCodeResponse(scheduleId, code, startedAt, expiresAt);
+        return new AttendanceCodeResponse(attendanceDate, code, startedAt, expiresAt);
     }
 }
