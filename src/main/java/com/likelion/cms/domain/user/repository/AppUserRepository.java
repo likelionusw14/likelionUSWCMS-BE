@@ -48,4 +48,6 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long>, JpaSpec
     Optional<AppUser> findByKakaoSubject(String kakaoSubject);
 
     boolean existsByStudentId(String studentId);
+
+    List<AppUser> findAllBySystemRoleAndAccountStatus(SystemRole systemRole, AccountStatus accountStatus);
 }

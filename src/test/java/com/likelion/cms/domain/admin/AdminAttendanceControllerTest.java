@@ -22,20 +22,18 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.likelion.cms.common.type.PartType;
 import com.likelion.cms.domain.attendance.controller.AdminAttendanceController;
 import com.likelion.cms.domain.attendance.dto.response.AttendanceCodeResponse;
 import com.likelion.cms.domain.attendance.dto.response.AttendanceResponse;
 import com.likelion.cms.domain.attendance.entity.AttendanceStatus;
 import com.likelion.cms.domain.attendance.entity.CheckInSource;
 import com.likelion.cms.domain.attendance.service.AdminAttendanceService;
-import com.likelion.cms.common.type.PartType;
 import com.likelion.cms.domain.user.entity.SystemRole;
 import com.likelion.cms.global.config.SecurityConfig;
 import com.likelion.cms.global.jwt.JwtTokenProvider;
@@ -44,6 +42,9 @@ import com.likelion.cms.global.response.PageResponse;
 import com.likelion.cms.global.security.AdminAccessGuard;
 import com.likelion.cms.global.security.CurrentUserPrincipal;
 
+/**
+ * #86/#87 재설계 반영: scheduleId 경로/파라미터 -> attendanceDate(date) 기준으로 재작성.
+ */
 @WebMvcTest(controllers = AdminAttendanceController.class)
 @Import({AdminAccessGuard.class, SecurityConfig.class})
 class AdminAttendanceControllerTest {
@@ -57,31 +58,34 @@ class AdminAttendanceControllerTest {
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
 
+    private static final LocalDate DATE = LocalDate.of(2026, 7, 25);
+
+    // ===================== GET /admin/attendances =====================
+
     @Test
     void listAttendancesReturnsOkResponse() throws Exception {
         LocalDateTime now = LocalDateTime.of(2026, 7, 25, 10, 0);
         AttendanceResponse item = AttendanceResponse.of(
                 100L, 1L, "정소윤", PartType.BACKEND,
-                10L, "정기 세션", LocalDate.of(2026, 7, 25),
-                AttendanceStatus.PRESENT, now, CheckInSource.SELF_CODE,
+                DATE, AttendanceStatus.PRESENT, now, CheckInSource.SELF_CODE,
                 null, 0, now, now
         );
         PageResponse<AttendanceResponse> response = PageResponse.of(
                 List.of(item), PageMeta.of(0, 20, 1, 1, false));
 
-        when(adminAttendanceService.listAttendances(eq(10L), any(), any(), any(), any()))
+        when(adminAttendanceService.listAttendances(eq(DATE), any(), any(), any(), any()))
                 .thenReturn(response);
 
         mockMvc.perform(get("/api/admin/attendances")
                         .with(authentication(adminAuthentication()))
-                        .param("scheduleId", "10"))
+                        .param("date", "2026-07-25"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].attendanceId").value(100))
                 .andExpect(jsonPath("$.page.totalElements").value(1));
     }
 
     @Test
-    void listAttendancesRejectsMissingScheduleId() throws Exception {
+    void listAttendancesRejectsMissingDate() throws Exception {
         mockMvc.perform(get("/api/admin/attendances")
                         .with(authentication(adminAuthentication())))
                 .andExpect(status().isBadRequest());
@@ -93,7 +97,7 @@ class AdminAttendanceControllerTest {
     void listAttendancesRejectsMemberRole() throws Exception {
         mockMvc.perform(get("/api/admin/attendances")
                         .with(authentication(memberAuthentication()))
-                        .param("scheduleId", "10"))
+                        .param("date", "2026-07-25"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("C005"));
 
@@ -103,21 +107,22 @@ class AdminAttendanceControllerTest {
     @Test
     void listAttendancesRejectsUnauthenticatedRequest() throws Exception {
         mockMvc.perform(get("/api/admin/attendances")
-                        .param("scheduleId", "10"))
+                        .param("date", "2026-07-25"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("C004"));
 
         verify(adminAttendanceService, never()).listAttendances(any(), any(), any(), any(), any());
     }
 
+    // ===================== PATCH /admin/attendances/{attendanceId} =====================
+
     @Test
     void updateAttendanceReturnsOkResponse() throws Exception {
         LocalDateTime now = LocalDateTime.of(2026, 7, 25, 14, 0);
         AttendanceResponse response = AttendanceResponse.of(
                 100L, 1L, "정소윤", PartType.BACKEND,
-                10L, "정기 세션", LocalDate.of(2026, 7, 25),
-                AttendanceStatus.LATE, now, CheckInSource.ADMIN,
-                "버스 지연", 1, now, now
+                DATE, AttendanceStatus.ABSENT, now, CheckInSource.ADMIN,
+                "사유 기록", 1, now, now
         );
 
         when(adminAttendanceService.updateAttendance(eq(100L), any(), eq(7L))).thenReturn(response);
@@ -127,14 +132,14 @@ class AdminAttendanceControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "status": "LATE",
-                                  "memo": "버스 지연",
+                                  "status": "ABSENT",
+                                  "memo": "사유 기록",
                                   "version": 0
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("LATE"))
-                .andExpect(jsonPath("$.memo").value("버스 지연"));
+                .andExpect(jsonPath("$.status").value("ABSENT"))
+                .andExpect(jsonPath("$.memo").value("사유 기록"));
     }
 
     @Test
@@ -186,40 +191,44 @@ class AdminAttendanceControllerTest {
         verify(adminAttendanceService, never()).updateAttendance(any(), any(), any());
     }
 
+    // ===================== POST /admin/attendance-code/{date} =====================
+
     @Test
     void createOrReissueCodeReturnsCreatedResponseAndLocation() throws Exception {
         LocalDateTime startedAt = LocalDateTime.of(2026, 7, 25, 10, 0);
         AttendanceCodeResponse response = AttendanceCodeResponse.of(
-                10L, "123456", startedAt, startedAt.plusSeconds(300));
+                DATE, "123456", startedAt, startedAt.plusSeconds(300));
 
-        when(adminAttendanceService.createOrReissueCode(eq(10L), eq(7L))).thenReturn(response);
+        when(adminAttendanceService.createOrReissueCode(eq(DATE), eq(7L))).thenReturn(response);
 
-        mockMvc.perform(post("/api/admin/schedules/10/attendance-code")
+        mockMvc.perform(post("/api/admin/attendance-code/2026-07-25")
                         .with(authentication(adminAuthentication())))
                 .andExpect(status().isCreated())
-                .andExpect(header().string("Location", "/api/admin/schedules/10/attendance-code"))
+                .andExpect(header().string("Location", "/api/admin/attendance-code/2026-07-25"))
                 .andExpect(jsonPath("$.code").value("123456"));
     }
 
     @Test
     void createOrReissueCodeRejectsMemberRole() throws Exception {
-        mockMvc.perform(post("/api/admin/schedules/10/attendance-code")
+        mockMvc.perform(post("/api/admin/attendance-code/2026-07-25")
                         .with(authentication(memberAuthentication())))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("C005"));
 
-        verify(adminAttendanceService, never()).createOrReissueCode(anyLong(), anyLong());
+        verify(adminAttendanceService, never()).createOrReissueCode(any(), anyLong());
     }
+
+    // ===================== GET /admin/attendance-code/{date} =====================
 
     @Test
     void getCurrentCodeReturnsOkResponse() throws Exception {
         LocalDateTime startedAt = LocalDateTime.of(2026, 7, 25, 10, 0);
         AttendanceCodeResponse response = AttendanceCodeResponse.of(
-                10L, "654321", startedAt, startedAt.plusSeconds(300));
+                DATE, "654321", startedAt, startedAt.plusSeconds(300));
 
-        when(adminAttendanceService.getCurrentCode(10L)).thenReturn(response);
+        when(adminAttendanceService.getCurrentCode(DATE)).thenReturn(response);
 
-        mockMvc.perform(get("/api/admin/schedules/10/attendance-code")
+        mockMvc.perform(get("/api/admin/attendance-code/2026-07-25")
                         .with(authentication(adminAuthentication())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("654321"));
@@ -227,12 +236,14 @@ class AdminAttendanceControllerTest {
 
     @Test
     void getCurrentCodeRejectsUnauthenticatedRequest() throws Exception {
-        mockMvc.perform(get("/api/admin/schedules/10/attendance-code"))
+        mockMvc.perform(get("/api/admin/attendance-code/2026-07-25"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("C004"));
 
         verify(adminAttendanceService, never()).getCurrentCode(any());
     }
+
+    // ===================== 인증 헬퍼 =====================
 
     private UsernamePasswordAuthenticationToken adminAuthentication() {
         CurrentUserPrincipal principal = new CurrentUserPrincipal(7L, SystemRole.ADMIN);

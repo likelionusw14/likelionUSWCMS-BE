@@ -1,6 +1,5 @@
 package com.likelion.cms.domain.attendance.entity;
 
-import com.likelion.cms.domain.schedule.entity.Schedule;
 import com.likelion.cms.domain.user.entity.AppUser;
 import com.likelion.cms.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
@@ -9,17 +8,19 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+
 
 @Entity
 @Table(name = "Attendance",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_attendance_user_schedule",
-                columnNames = {"userId", "scheduleId"}),
+                name = "uk_attendance_user_date",
+                columnNames = {"userId", "attendanceDate"}),
         indexes = {
-                @Index(name = "idx_attendance_schedule_id", columnList = "scheduleId"),
+                @Index(name = "idx_attendance_date", columnList = "attendanceDate"),
                 @Index(name = "idx_attendance_updated_by", columnList = "updatedBy"),
-                @Index(name = "idx_attendance_schedule_status", columnList = "scheduleId, status"),
+                @Index(name = "idx_attendance_date_status", columnList = "attendanceDate, status"),
                 @Index(name = "idx_attendance_user_created", columnList = "userId, createdAt")
         })
 @Getter
@@ -34,9 +35,8 @@ public class Attendance extends BaseTimeEntity {
     @JoinColumn(name = "userId", nullable = false)
     private AppUser user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "scheduleId", nullable = false)
-    private Schedule schedule;
+    @Column(nullable = false)
+    private LocalDate attendanceDate;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -59,9 +59,9 @@ public class Attendance extends BaseTimeEntity {
     private Integer version;
 
     @Builder
-    private Attendance(AppUser user, Schedule schedule, AttendanceStatus status) {
+    private Attendance(AppUser user, LocalDate attendanceDate, AttendanceStatus status) {
         this.user = user;
-        this.schedule = schedule;
+        this.attendanceDate = attendanceDate;
         this.status = status != null ? status : AttendanceStatus.NOT_CHECKED;
     }
 

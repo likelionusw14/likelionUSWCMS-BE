@@ -1,13 +1,15 @@
 package com.likelion.cms.domain.attendance.controller;
 
+import java.net.URI;
+import java.time.LocalDate;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import java.net.URI;
 
 import com.likelion.cms.common.type.PartType;
 import com.likelion.cms.domain.attendance.dto.request.UpdateAttendanceRequest;
@@ -35,14 +37,14 @@ public class AdminAttendanceController {
     @GetMapping("/attendances")
     public PageResponse<AttendanceResponse> listAttendances(
             @AuthenticationPrincipal CurrentUserPrincipal principal,
-            @RequestParam @Positive Long scheduleId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) PartType part,
-            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) @Positive Long userId,
             @RequestParam(required = false) AttendanceStatus status,
             @PageableDefault(size = 20, sort = {"user.part", "user.name"}) Pageable pageable
     ) {
         adminAccessGuard.requireAdmin(principal);
-        return adminAttendanceService.listAttendances(scheduleId, part, userId, status, pageable);
+        return adminAttendanceService.listAttendances(date, part, userId, status, pageable);
     }
 
     @PatchMapping("/attendances/{attendanceId}")
@@ -55,24 +57,24 @@ public class AdminAttendanceController {
         return adminAttendanceService.updateAttendance(attendanceId, request, actorUserId);
     }
 
-    @PostMapping("/schedules/{scheduleId}/attendance-code")
+    @PostMapping("/attendance-code/{date}")
     public ResponseEntity<AttendanceCodeResponse> createOrReissueCode(
             @AuthenticationPrincipal CurrentUserPrincipal principal,
-            @PathVariable @Positive Long scheduleId
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
         Long actorUserId = adminAccessGuard.requireAdmin(principal);
-        AttendanceCodeResponse response = adminAttendanceService.createOrReissueCode(scheduleId, actorUserId);
+        AttendanceCodeResponse response = adminAttendanceService.createOrReissueCode(date, actorUserId);
         return ResponseEntity
-                .created(URI.create("/api/admin/schedules/" + scheduleId + "/attendance-code"))
+                .created(URI.create("/api/admin/attendance-code/" + date))
                 .body(response);
     }
 
-    @GetMapping("/schedules/{scheduleId}/attendance-code")
+    @GetMapping("/attendance-code/{date}")
     public AttendanceCodeResponse getCurrentCode(
             @AuthenticationPrincipal CurrentUserPrincipal principal,
-            @PathVariable @Positive Long scheduleId
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
         adminAccessGuard.requireAdmin(principal);
-        return adminAttendanceService.getCurrentCode(scheduleId);
+        return adminAttendanceService.getCurrentCode(date);
     }
 }
