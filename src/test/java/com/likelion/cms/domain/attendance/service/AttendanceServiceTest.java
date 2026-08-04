@@ -37,7 +37,8 @@ import static org.mockito.Mockito.when;
 class AttendanceServiceTest {
 
     // checkIn 내부에서 LocalDate.now()를 직접 쓰므로 테스트도 실행 시점의 오늘 날짜로 스텁을 맞춘다.
-    private static final LocalDate ATTENDANCE_DATE = LocalDate.now();
+    // 클래스 로드 시점이 아니라 각 테스트 직전에 계산해 자정 경계에서의 오차 가능성을 최소화한다.
+    private LocalDate ATTENDANCE_DATE;
 
     @Mock
     private AttendanceRepository attendanceRepository;
@@ -49,6 +50,7 @@ class AttendanceServiceTest {
 
     @BeforeEach
     void setUp() {
+        ATTENDANCE_DATE = LocalDate.now();
         attendanceService = new AttendanceService(attendanceRepository, attendanceCodeService);
     }
 
