@@ -18,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AttendanceCodeService {
 
-    private static final Duration CODE_TTL = Duration.ofSeconds(300);
+    public static final Duration CODE_TTL = Duration.ofSeconds(300);
     private static final String KEY_PREFIX = "attendance:code:";
 
     private final StringRedisTemplate redisTemplate;

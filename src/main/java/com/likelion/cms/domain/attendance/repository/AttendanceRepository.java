@@ -1,6 +1,7 @@
 package com.likelion.cms.domain.attendance.repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,6 +40,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     Optional<Attendance> findByUser_UserIdAndAttendanceDate(Long userId, LocalDate attendanceDate);
 
+
     @Query("""
             SELECT a FROM Attendance a
             WHERE a.user.userId = :userId
@@ -46,19 +48,16 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
             """)
     Page<Attendance> findAllByUserId(@Param("userId") Long userId, Pageable pageable);
 
-    @Query("SELECT DISTINCT a.attendanceDate FROM Attendance a WHERE a.status = :status")
-    List<LocalDate> findDistinctAttendanceDatesByStatus(@Param("status") AttendanceStatus status);
-
     @Modifying
     @Query("""
             UPDATE Attendance a
             SET a.status = :newStatus
-            WHERE a.attendanceDate = :attendanceDate
-              AND a.status = :oldStatus
+            WHERE a.status = :oldStatus
+              AND a.createdAt <= :cutoff
             """)
-    int bulkUpdateStatus(
-            @Param("attendanceDate") LocalDate attendanceDate,
+    int bulkUpdateExpiredStatus(
             @Param("oldStatus") AttendanceStatus oldStatus,
-            @Param("newStatus") AttendanceStatus newStatus
+            @Param("newStatus") AttendanceStatus newStatus,
+            @Param("cutoff") LocalDateTime cutoff
     );
 }
