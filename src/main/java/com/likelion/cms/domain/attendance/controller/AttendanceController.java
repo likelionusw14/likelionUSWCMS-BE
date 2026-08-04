@@ -9,20 +9,18 @@ import com.likelion.cms.global.security.CurrentUserPrincipal;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 경로가 /api/attendances(본인 목록)와 /api/schedules/{scheduleId}/attendance-check-ins(코드 인증)로
+ * 경로가 /api/attendances(본인 목록)와 /api/attendance-check-ins(코드 인증)로
  * 나뉘어 있어 class 레벨 @RequestMapping 대신 메서드별 전체 경로를 사용한다.
  */
 @Validated
@@ -43,13 +41,12 @@ public class AttendanceController {
         return attendanceService.listMine(userId, page, size);
     }
 
-    @PostMapping("/api/schedules/{scheduleId}/attendance-check-ins")
+    @PostMapping("/api/attendance-check-ins")
     public AttendanceResponse checkIn(
             @AuthenticationPrincipal CurrentUserPrincipal principal,
-            @PathVariable @Positive Long scheduleId,
             @Valid @RequestBody AttendanceCheckInRequest request
     ) {
         Long userId = accountStatusGuard.requireActive(principal);
-        return attendanceService.checkIn(userId, scheduleId, request.code());
+        return attendanceService.checkIn(userId, request.code());
     }
 }

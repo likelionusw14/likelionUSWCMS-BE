@@ -11,7 +11,6 @@ import com.likelion.cms.global.exception.BusinessException;
 import com.likelion.cms.global.exception.ErrorCode;
 import com.likelion.cms.global.response.PageResponse;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -34,21 +33,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * #86 재설계(scheduleId -> attendanceDate)로 인해 컴파일만 되도록
- * 정현윤이 최소 수정하고 전체 비활성화(@Disabled)해뒀습니다.
- *
- * TODO(신준호): AttendanceService.checkIn의 scheduleId 파라미터를
- * attendanceDate 기준으로 재설계한 뒤, 이 테스트도 그에 맞춰 다시
- * 작성하고 @Disabled를 제거해주세요. 지금은 컴파일 통과만을 위해
- * scheduleId=10L 자리를 LocalDate.of(2026, 7, 20)로 임시 치환했을
- * 뿐이라 시나리오상 의미가 정확하지 않을 수 있습니다.
- */
-@Disabled("#86 재설계로 AttendanceService.checkIn 로직이 바뀌어 재작성 필요 (신준호 확인 필요)")
 @ExtendWith(MockitoExtension.class)
 class AttendanceServiceTest {
 
-    private static final LocalDate ATTENDANCE_DATE = LocalDate.of(2026, 7, 20);
+    // checkIn 내부에서 LocalDate.now()를 직접 쓰므로 테스트도 실행 시점의 오늘 날짜로 스텁을 맞춘다.
+    private static final LocalDate ATTENDANCE_DATE = LocalDate.now();
 
     @Mock
     private AttendanceRepository attendanceRepository;
@@ -70,7 +59,7 @@ class AttendanceServiceTest {
                 .thenReturn(Optional.of(attendance));
         when(attendanceCodeService.matches(ATTENDANCE_DATE, "123456")).thenReturn(true);
 
-        AttendanceResponse response = attendanceService.checkIn(1L, 10L, "123456");
+        AttendanceResponse response = attendanceService.checkIn(1L, "123456");
 
         assertThat(response.getStatus()).isEqualTo(AttendanceStatus.PRESENT);
         assertThat(attendance.getCheckInSource()).isEqualTo(CheckInSource.SELF_CODE);
@@ -83,7 +72,7 @@ class AttendanceServiceTest {
         when(attendanceRepository.findByUser_UserIdAndAttendanceDate(1L, ATTENDANCE_DATE))
                 .thenReturn(Optional.of(attendance));
 
-        AttendanceResponse response = attendanceService.checkIn(1L, 10L, "123456");
+        AttendanceResponse response = attendanceService.checkIn(1L, "123456");
 
         assertThat(response.getStatus()).isEqualTo(AttendanceStatus.PRESENT);
         verify(attendanceCodeService, never()).matches(ATTENDANCE_DATE, "123456");
@@ -95,7 +84,7 @@ class AttendanceServiceTest {
         when(attendanceRepository.findByUser_UserIdAndAttendanceDate(1L, ATTENDANCE_DATE))
                 .thenReturn(Optional.of(attendance));
 
-        assertThatThrownBy(() -> attendanceService.checkIn(1L, 10L, "123456"))
+        assertThatThrownBy(() -> attendanceService.checkIn(1L, "123456"))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.ATTENDANCE_ALREADY_FINALIZED));
         verify(attendanceCodeService, never()).matches(ATTENDANCE_DATE, "123456");
@@ -108,7 +97,7 @@ class AttendanceServiceTest {
                 .thenReturn(Optional.of(attendance));
         when(attendanceCodeService.matches(ATTENDANCE_DATE, "000000")).thenReturn(false);
 
-        assertThatThrownBy(() -> attendanceService.checkIn(1L, 10L, "000000"))
+        assertThatThrownBy(() -> attendanceService.checkIn(1L, "000000"))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.ATTENDANCE_CODE_INVALID));
         assertThat(attendance.getStatus()).isEqualTo(AttendanceStatus.NOT_CHECKED);
@@ -119,7 +108,7 @@ class AttendanceServiceTest {
         when(attendanceRepository.findByUser_UserIdAndAttendanceDate(1L, ATTENDANCE_DATE))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> attendanceService.checkIn(1L, 10L, "123456"))
+        assertThatThrownBy(() -> attendanceService.checkIn(1L, "123456"))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.RESOURCE_NOT_FOUND));
     }
