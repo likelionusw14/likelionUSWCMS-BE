@@ -24,6 +24,22 @@ import com.likelion.cms.domain.attendance.repository.AttendanceRepository;
 import com.likelion.cms.domain.attendance.service.AttendanceCodeCacheValue;
 import com.likelion.cms.domain.attendance.service.AttendanceCodeService;
 
+/**
+ * #88: Redis 코드 키 생존 여부로 판단하는 방식.
+ *
+ * 판정 기준이 "Redis에 그 날짜 코드가 있는지"뿐이라, 스케줄러 입장에서는
+ * "최초 발급"과 "재발급"을 구분하지 않는다 (둘 다 getCurrent()가 값을
+ * 반환하면 동일하게 스킵). 그래서 재발급 전용 시나리오를 별도 테스트로
+ * 만들어도 skipsDateWhenCodeStillActive와 검증 내용이 완전히 겹쳐
+ * 중복이 된다 (CodeRabbit 리뷰로 발견, 중복 테스트 제거).
+ *
+ * "재발급해도 오결석 처리 안 됨"이 실제로 보장되는 이유는 이 스케줄러가
+ * createdAt을 아예 참조하지 않고 Redis 키 존재 여부만 보기 때문이며,
+ * 그 설계 자체가 이 클래스의 테스트 대상이다. 재발급 시 기존 Attendance
+ * 행이 새로 만들어지지 않고 재사용된다는 사실은
+ * AdminAttendanceServiceTest(createOrReissueCode 관련 테스트)에서
+ * 검증한다.
+ */
 @ExtendWith(MockitoExtension.class)
 class AttendanceAutoAbsentSchedulerTest {
 
@@ -36,7 +52,7 @@ class AttendanceAutoAbsentSchedulerTest {
     private AttendanceAutoAbsentScheduler scheduler;
 
     @Test
-    @DisplayName("코드가 아직 살아있는 날짜는 건드리지 않는다")
+    @DisplayName("코드가 아직 살아있는 날짜는 건드리지 않는다 (최초 발급/재발급 모두 동일하게 적용됨)")
     void skipsDateWhenCodeStillActive() {
         LocalDate activeDate = LocalDate.of(2026, 8, 4);
 
@@ -68,26 +84,6 @@ class AttendanceAutoAbsentSchedulerTest {
 
         verify(attendanceRepository, times(1)).bulkUpdateStatus(
                 eq(expiredDate), eq(AttendanceStatus.NOT_CHECKED), eq(AttendanceStatus.ABSENT), any());
-    }
-
-    @Test
-    @DisplayName("""
-            [재발급 시나리오 회귀 테스트] 코드가 재발급되어 Redis 키가 갱신된 상태라면,
-            기존 NOT_CHECKED 행의 생성 시각이 오래됐더라도 결석 처리하지 않는다.
-            """)
-    void doesNotConvertWhenCodeWasReissuedAndStillValid() {
-        LocalDate reissuedDate = LocalDate.of(2026, 8, 4);
-
-        when(attendanceRepository.findDistinctAttendanceDatesByStatus(AttendanceStatus.NOT_CHECKED))
-                .thenReturn(List.of(reissuedDate));
-        when(attendanceCodeService.getCurrent(reissuedDate))
-                .thenReturn(Optional.of(new AttendanceCodeCacheValue(
-                        "654321", LocalDateTime.of(2026, 8, 4, 10, 4))));
-
-        scheduler.convertExpiredNotCheckedToAbsent();
-
-        verify(attendanceRepository, never())
-                .bulkUpdateStatus(eq(reissuedDate), any(), any(), any());
     }
 
     @Test
