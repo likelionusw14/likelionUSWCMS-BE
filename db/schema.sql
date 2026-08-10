@@ -100,7 +100,7 @@ CREATE TABLE `Attendance` (
   `attendanceId` bigint NOT NULL AUTO_INCREMENT,
   `checkedAt` datetime(6) DEFAULT NULL,
   `createdAt` datetime(6) NOT NULL,
-  `scheduleId` bigint NOT NULL,
+  `attendanceDate` date NOT NULL,
   `updatedAt` datetime(6) NOT NULL,
   `updatedBy` bigint DEFAULT NULL,
   `userId` bigint NOT NULL,
@@ -108,14 +108,13 @@ CREATE TABLE `Attendance` (
   `checkInSource` enum('ADMIN','SELF_CODE') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `status` enum('ABSENT','LATE','NOT_CHECKED','PRESENT') COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`attendanceId`),
-  UNIQUE KEY `uk_attendance_user_schedule` (`userId`,`scheduleId`),
-  KEY `idx_attendance_schedule_id` (`scheduleId`),
+  UNIQUE KEY `uk_attendance_user_date` (`userId`,`attendanceDate`),
+  KEY `idx_attendance_date` (`attendanceDate`),
   KEY `idx_attendance_updated_by` (`updatedBy`),
-  KEY `idx_attendance_schedule_status` (`scheduleId`,`status`),
+  KEY `idx_attendance_date_status` (`attendanceDate`,`status`),
   KEY `idx_attendance_user_created` (`userId`,`createdAt`),
   CONSTRAINT `FK3b4xhhhp74x81bcdf4jdhw8vx` FOREIGN KEY (`updatedBy`) REFERENCES `AppUser` (`userId`),
-  CONSTRAINT `FKmnv8qsmx3gpyp4o126jhbeqck` FOREIGN KEY (`userId`) REFERENCES `AppUser` (`userId`),
-  CONSTRAINT `FKo9ykykvtftnv9tq4oyjuvs0x8` FOREIGN KEY (`scheduleId`) REFERENCES `Schedule` (`scheduleId`)
+  CONSTRAINT `FKmnv8qsmx3gpyp4o126jhbeqck` FOREIGN KEY (`userId`) REFERENCES `AppUser` (`userId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE `Cohort` (
   `endedAt` date DEFAULT NULL,
